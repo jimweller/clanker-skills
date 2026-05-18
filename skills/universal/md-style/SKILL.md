@@ -1,8 +1,7 @@
 ---
-
 name: md-style
 description: README style guide for concise, direct documentation. Use when writing or editing README files.
-ß---
+---
 
 <!-- markdownlint-disable-file MD041 -->
 
