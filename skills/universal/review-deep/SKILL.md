@@ -21,7 +21,7 @@ If the user provided a path with the invocation, treat it as the target director
 
 | Label  | Model ID                      |
 | ------ | ----------------------------- |
-| openai | openai/gpt-5.3-codex          |
+| openai | openai/gpt-5.5                |
 | gemini | google/gemini-3.1-pro-preview |
 | claude | az-anthropic/claude-opus-4-6  |
 

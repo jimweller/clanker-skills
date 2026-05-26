@@ -19,7 +19,7 @@ For a faster single-model review using an internal subagent, use the ralph-revie
 
 | Label  | Model ID                      |
 | ------ | ----------------------------- |
-| openai | openai/gpt-5.3-codex          |
+| openai | openai/gpt-5.5          |
 | gemini | google/gemini-3.1-pro-preview |
 | claude | az-anthropic/claude-opus-4-6  |
 
@@ -313,7 +313,7 @@ OpenAI:
 ```bash
 STATE_DIR="<PROJECT_ROOT>/.llmtmp/ralph_review_state" && \
 opencode run \
-  -m openai/gpt-5.3-codex \
+  -m openai/gpt-5.5 \
   --format json \
   --print-logs \
   --log-level INFO \
