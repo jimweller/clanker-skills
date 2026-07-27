@@ -122,7 +122,7 @@ Use the path specified in existing CLAUDE.md, or default `.llmdocs/` at the targ
 
 ### Structure
 
-Flat, 1 file per concept. The first 5 files are **required** and must always exist. Additional concept files are created as needed.
+Flat, 1 file per concept. The first 6 files are **required** and must always exist. Additional concept files are created as needed.
 
 ```text
 .llmdocs/
@@ -131,6 +131,7 @@ Flat, 1 file per concept. The first 5 files are **required** and must always exi
   data-model.md      # Schema, models, relationships (required)
   deployment.md      # Deploy process, environments (required)
   ops.md             # Maintenance, operations, runbooks (required)
+  security.md        # Trust boundaries, secrets handling, authn/authz, threat model (required)
   <concept>.md       # Domain-specific as needed
 ```text
 
