@@ -19,7 +19,7 @@ For a faster single-model review using an internal subagent, use the ralph-revie
 
 | Label  | Model ID                      |
 | ------ | ----------------------------- |
-| openai | openai/gpt-5.5          |
+| openai | openai/gpt-5.5                |
 | gemini | google/gemini-3.1-pro-preview |
 | claude | az-anthropic/claude-opus-4-6  |
 
@@ -461,7 +461,7 @@ grep -E "^(ERROR|WARN)" "$LOGFILE"
 - Do NOT perform any review analysis directly. The opencode processes handle reviewing.
 - Do NOT ask questions during execution. This is non-interactive.
 - Launch all 3 processes in parallel. Do not wait for one to finish before starting another.
-- Use plain message invocation, not `--command`. The `--command` flag has a known issue with the c7 MCP server.
+- Use plain message invocation, not `--command`. The `--command` flag has a known issue with the context7 MCP server.
 - Preserve the state directory after reporting results. NDJSON and log files stay for post-run inspection.
 - If a model fails, still wait for and report the others.
 - The bd graph validation in Step 2 runs in the invoking agent, not in opencode. Findings are passed to opencode reviewers as context.

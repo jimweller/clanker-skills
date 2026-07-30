@@ -384,7 +384,7 @@ grep -E "^(ERROR|WARN)" "$LOGFILE"
 - Do NOT perform any review analysis during Steps 1-7. Only analyze review outputs in Step 8.
 - Do NOT ask questions during execution. This is non-interactive.
 - Launch all 3 subagents in a single parallel batch. NEVER launch sequentially.
-- Use plain message invocation, not `--command`. The `--command` flag has a known issue with the c7 MCP server.
+- Use plain message invocation, not `--command`. The `--command` flag has a known issue with the context7 MCP server.
 - Do NOT clean up per-area files, NDJSON logs, or text logs. All intermediate artifacts persist for debugging and evals.
 - If a model fails, still wait for and report the others.
 `````

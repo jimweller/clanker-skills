@@ -23,7 +23,7 @@ The argument to this skill is the claim to verify. If no argument is provided, s
    - **Researchable**: documentation, source code, or web search can provide evidence. Go to step 4.
    - **Unverifiable**: no available tool or source can confirm it. Go to step 5.
 3. **Test it.** Run the command or read the file. Report the raw output. Compare to the claim. Verdict: confirmed, refuted, or partially true (state which parts hold and which fail).
-4. **Research it.** Use c7, g MCP servers, WebSearch, or Read to find authoritative sources. Cite the source (URL, file path, or command output). Verdict: confirmed, refuted, partially true, or insufficient evidence.
+4. **Research it.** Use context7, researcher MCP servers, WebSearch, or Read to find authoritative sources. Cite the source (URL, file path, or command output). Verdict: confirmed, refuted, partially true, or insufficient evidence.
 5. **Declare it unverifiable.** State why no available tool can test it. Retract the claim or restate it as speculation with explicit qualification.
 
 ## Output format

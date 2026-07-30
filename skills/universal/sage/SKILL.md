@@ -10,32 +10,32 @@ STARTER_CHARACTER = 🧑‍🎓
 
 # Sage
 
-Research skill using c7 (Context7) and g (Google) MCP servers to fetch current documentation and best practices. Never present training data as current when this skill is active. Always verify via c7 or g first.
+Research skill using context7 and researcher (web research) MCP servers to fetch current documentation and best practices. Never present training data as current when this skill is active. Always verify via context7 or researcher first.
 
-NEVER use the native WebSearch or WebFetch tools when this skill is active. Always use c7 or g MCP tools instead. The g MCP server provides richer results with quality scoring, caching, and document extraction that the native tools lack.
+NEVER use the native WebSearch or WebFetch tools when this skill is active. Always use context7 or researcher MCP tools instead. The researcher MCP server provides richer results with quality scoring, caching, and document extraction that the native tools lack.
 
 ---
 
 ## Decision Logic
 
-1. Specific library, framework, SDK, API, or CLI tool: use c7 first
-2. Best practices, patterns, comparisons, troubleshooting, general topics: use c7 and g
-3. Time-sensitive topics (releases, incidents, breaking changes): use `google_news_search`
+1. Specific library, framework, SDK, API, or CLI tool: use context7 first
+2. Best practices, patterns, comparisons, troubleshooting, general topics: use context7 and researcher
+3. Time-sensitive topics (releases, incidents, breaking changes): use `news_search`
 4. Academic or peer-reviewed research: use `academic_search`
 5. Complex research spanning 3+ queries: use `sequential_search` to track state
 
 ---
 
-## c7: Library Documentation
+## context7: Library Documentation
 
-c7 indexes official documentation. Always current. No date filtering needed.
+context7 indexes official documentation. Always current. No date filtering needed.
 
 ### Workflow
 
 1. Resolve the library ID:
 
 ````text
-mcp__c7__resolve-library-id
+mcp__context7__resolve-library-id
   libraryName: "<library name>"
   query: "<specific question>"
 ```text
@@ -45,22 +45,22 @@ mcp__c7__resolve-library-id
 3. Query the docs:
 
 ```text
-mcp__c7__query-docs
+mcp__context7__query-docs
   libraryId: "<resolved ID>"
   query: "<specific question>"
 ```text
 
-### c7 Rules
+### context7 Rules
 
-- If `resolve-library-id` returns no matches, fall back to g
+- If `resolve-library-id` returns no matches, fall back to researcher
 - When multiple libraries match, pick by: name match first, then benchmark score, then source reputation
 - Be specific in queries: "How to set up JWT authentication in Express.js" not "auth"
 
 ---
 
-## g: Web Research
+## researcher: Web Research
 
-For broader questions, best practices, comparisons, or when c7 has no coverage.
+For broader questions, best practices, comparisons, or when context7 has no coverage.
 
 ### Date Bias
 
@@ -71,7 +71,7 @@ Google queries must append the current year and the prior year to bias toward re
 "next.js app router migration guide 2025 2026"
 ```text
 
-This applies to all `query` fields sent to g tools.
+This applies to all `query` fields sent to researcher tools.
 
 ### Tool Selection
 
@@ -79,8 +79,8 @@ This applies to all `query` fields sent to g tools.
 | ------------------------------ | -------------------- | ------------------------------------------------------------------------------ |
 | Research a topic               | `search_and_scrape`  | Preferred. Searches and retrieves content in one call. Quality-scored results. |
 | Read a specific URL            | `scrape_page`        | Also extracts YouTube transcripts and parses PDF, DOCX, PPTX.                  |
-| Get URLs to selectively scrape | `google_search`      | Use when you need to pick which pages to read.                                 |
-| Recent news or releases        | `google_news_search` | Use `freshness` param: `hour`, `day`, `week`, `month`.                         |
+| Get URLs to selectively scrape | `web_search`      | Use when you need to pick which pages to read.                                 |
+| Recent news or releases        | `news_search` | Use `freshness` param: `hour`, `day`, `week`, `month`.                         |
 | Academic papers                | `academic_search`    | Searches arXiv, PubMed, IEEE, Springer. Returns citations.                     |
 | Multi-step investigation       | `sequential_search`  | Tracks progress across 3+ searches. Supports branching.                        |
 
@@ -89,17 +89,17 @@ This applies to all `query` fields sent to g tools.
 **`search_and_scrape` (preferred for most queries):**
 
 ```text
-mcp__g__search_and_scrape
+mcp__researcher__search_and_scrape
   query: "<topic> <current_year> <prior_year>"
   num_results: 3-5
 ```text
 
 Use 3 results for quick lookups, 5-8 for thorough research.
 
-**`google_news_search` (time-sensitive topics):**
+**`news_search` (time-sensitive topics):**
 
 ```text
-mcp__g__google_news_search
+mcp__researcher__news_search
   query: "<topic>"
   freshness: "week"
   num_results: 5
@@ -108,15 +108,15 @@ mcp__g__google_news_search
 **`academic_search` (peer-reviewed sources):**
 
 ```text
-mcp__g__academic_search
+mcp__researcher__academic_search
   query: "<research topic>"
   num_results: 5
 ```text
 
-**`google_search` then `scrape_page` (selective reading):**
+**`web_search` then `scrape_page` (selective reading):**
 
 ```text
-mcp__g__google_search
+mcp__researcher__web_search
   query: "<topic> <current_year> <prior_year>"
   num_results: 5
 ```text
@@ -126,7 +126,7 @@ Then scrape only the most relevant URLs from the results.
 **`sequential_search` (complex multi-step):**
 
 ```text
-mcp__g__sequential_search
+mcp__researcher__sequential_search
   searchStep: "Starting research on <topic>"
   stepNumber: 1
   nextStepNeeded: true
@@ -134,7 +134,7 @@ mcp__g__sequential_search
 
 Track findings across steps. Record sources with quality scores.
 
-### g Rules
+### researcher Rules
 
 - Always append year strings to queries (current year and prior year)
 - Prefer `search_and_scrape` over separate search + scrape calls
@@ -151,8 +151,8 @@ Track findings across steps. Record sources with quality scores.
 
 Report findings inline in the conversation. Include:
 
-- Source citations (URLs from g, library IDs from c7)
+- Source citations (URLs from researcher, library IDs from context7)
 - Version numbers when relevant
-- Date of source material when available from g results
+- Date of source material when available from researcher results
 - Clear statement if information was not found or results were inconclusive
 ````
