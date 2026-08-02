@@ -1,5 +1,5 @@
 ---
-name: fact-check
+name: prove-it
 description: "Use when a factual claim lacks evidence, when called out for fabricating facts, or when a statement needs verification before being presented as true. Takes a claim as argument."
 ---
 
@@ -7,7 +7,7 @@ description: "Use when a factual claim lacks evidence, when called out for fabri
 
 STARTER_CHARACTER = 🔬
 
-# Fact-Check
+# Prove It
 
 A claim was made without evidence. This skill forces verification before the claim can stand.
 
