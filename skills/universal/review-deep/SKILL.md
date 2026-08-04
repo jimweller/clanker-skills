@@ -11,7 +11,7 @@ STARTER_CHARACTER = 🕵️‍♂️
 
 # Code Review Command
 
-Launch 3 independent code reviews in parallel using different models via `opencode run`. The invoking agent packs repomix once, then each model spawns 8 review-* subagents that navigate the packed output via MCP. Each model produces one combined review file.
+Launch 3 independent code reviews in parallel using different models via `opencode run`. The invoking agent packs repomix once, then each model spawns 8 reviewer-* subagents that navigate the packed output via MCP. Each model produces one combined review file.
 
 ## Arguments
 
@@ -98,21 +98,21 @@ Do NOT read REPOMIX_FILE directly.
 # Step 2: Spawn review agents
 
 Spawn ALL 8 review agents. Note: opencode executes task calls sequentially (known issue #14195), so agents will run one at a time regardless of how they are requested.
-Use the agent name `review-<area>` for each. Each agent prompt MUST include:
+Use the agent name `reviewer-<area>` for each. Each agent prompt MUST include:
 - outputId=<the outputId from Step 1>
 - OUTPUT_PATH=<STATE_DIR>/<MODEL_LABEL>-<area>.md
 
 STATE_DIR: <PROJECT_ROOT>/.llmtmp/review-deep
 
 Areas and agent names:
-- review-security -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-security.md
-- review-architecture -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-architecture.md
-- review-solid -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-solid.md
-- review-correctness -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-correctness.md
-- review-testing -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-testing.md
-- review-ops -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-ops.md
-- review-performance -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-performance.md
-- review-quality -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-quality.md
+- reviewer-security -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-security.md
+- reviewer-architecture -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-architecture.md
+- reviewer-solid -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-solid.md
+- reviewer-correctness -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-correctness.md
+- reviewer-testing -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-testing.md
+- reviewer-ops -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-ops.md
+- reviewer-performance -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-performance.md
+- reviewer-quality -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-quality.md
 
 Each agent writes its own per-area file. The agent definitions handle the review logic.
 
