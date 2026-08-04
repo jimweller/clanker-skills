@@ -77,6 +77,23 @@ Untracked files carry no diff representation, so their full contents are appende
 
 `mkdir -p` then `find -delete` rather than `rm -rf`. A `safe-rm` shim on `PATH` (as in some dotfiles setups) moves paths to Trash and exits non-zero on a missing path even under `-f`, which breaks the wipe on a first run.
 
+## Step 3.5: Pre-flight Scan
+
+A sensitive-data hook that guards `Read` will block a reviewer mid-run, and a reviewer holds no `AskUserQuestion` tool, so it cannot ask for a bypass. Scan the input before the fan-out so the operator learns about it from one cheap step rather than from a partial report.
+
+```bash
+SCAN="$HOME/.config/dotfiles/scripts/canary-scan.sh"
+if [ -x "$SCAN" ]; then
+  "$SCAN" "$INPUT" || true
+fi
+```
+
+`canary-scan.sh` exits 0 with no output when the input is clean or the hook is not installed, and exits 2 printing one `<ruleId> x<count>` line per rule when it hits. The `|| true` keeps a non-zero exit from ending the step; the output is the signal, not the status.
+
+On a hit, tell the operator what fired and continue to Step 4 anyway. State that the reviewers may be blocked on their read, and that re-invoking with `[allow-pii]` on their own prompt clears it. An allow tag on the operator's prompt propagates to the subagents spawned in that turn; the tag does not need to appear in the dispatch prompt.
+
+Blocking is per-read and can be partial. Some reviewers get through while others do not, so Step 5 still has to check every response.
+
 ## Step 4: Dispatch 8 Reviewers in Parallel
 
 Issue all 8 Agent calls **in a single tool block** with `run_in_background: false`.
