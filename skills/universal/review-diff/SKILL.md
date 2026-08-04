@@ -136,15 +136,16 @@ Do not pack repomix. The input file holds everything.
 
 ## Step 5: Verify Every Response
 
-Check each of the 8 responses before consolidating. A response is valid only when its first non-blank line is the H2 naming that area, and its body holds either at least one finding line or exactly `No findings.`
+Check each of the 8 responses before consolidating.
 
-Re-dispatch any agent whose response fails that check. Three failure modes produce a response that is not findings:
+**Strip, do not re-dispatch, for stray prose.** A reviewer that finished a verification step often writes a transitional sentence before its H2. Measured across three identical runs, that happened in 2, 2, and 5 of 8 responses; the swing between identical runs is wider than the swing between wordings of the instruction telling them not to. Prompt tuning does not fix it, so fix it here: discard everything before the first `##` heading and keep the rest. This costs nothing and always works.
+
+**Re-dispatch** when the response holds no H2 at all, or holds an H2 with neither a finding line nor exactly `No findings.` Two causes:
 
 - The agent died on a transient API error and returned nothing.
-- A sensitive-data filter blocked its read of the input file and it returned a refusal. An ordinary bind address such as `0.0.0.0` in the diff is enough to trip one. Re-dispatch with the operator's PII bypass token when the refusal names one.
-- The agent narrated a partial read before the H2, meaning it reviewed less than the full change set.
+- A hook blocked its read of the input file and it returned a refusal. Step 3.5 usually predicts this. An allow tag on the operator's own prompt propagates to subagents spawned in that turn.
 
-Never record any of these as `No findings.` An area that cannot be covered after a re-dispatch is reported as `Not reviewed` in the summary, naming the reason.
+Never record either as `No findings.` An area still uncovered after one re-dispatch is reported as `Not reviewed` in the summary, naming the reason.
 
 Editing an agent definition does not affect a session already running. Claude Code detects agent files being added or removed, but a session keeps the body it loaded at startup, and a definition reached through a symlink (as dotbot installs them) is not re-read on edit. Restart the session after changing a reviewer.
 
