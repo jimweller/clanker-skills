@@ -81,7 +81,7 @@ Untracked files carry no diff representation, so their full contents are appende
 
 Issue all 8 Agent calls **in a single tool block** with `run_in_background: false`.
 
-Subagents default to running in the background. A backgrounded fan-out delivers its results in later turns, so Step 5 would find nothing to consolidate. Synchronous dispatch in one block is what makes the fleet parallel and the report possible in this turn.
+Subagents default to running in the background. A backgrounded fan-out delivers its results in later turns, so Step 6 would find nothing to consolidate. Synchronous dispatch in one block is what makes the fleet parallel and the report possible in this turn.
 
 | Perspective           | Agent                   |
 | --------------------- | ----------------------- |
@@ -117,11 +117,21 @@ The brief stays short on purpose. Severity, citation format, output shape, and l
 
 Do not pack repomix. The input file holds everything.
 
-A reviewer can die on a transient API error and return nothing. Re-dispatch that one agent before consolidating. Never report a silent loss as `No findings.`, and never let a dead agent's area go unmentioned in the summary.
+## Step 5: Verify Every Response
+
+Check each of the 8 responses before consolidating. A response is valid only when its first non-blank line is the H2 naming that area, and its body holds either at least one finding line or exactly `No findings.`
+
+Re-dispatch any agent whose response fails that check. Three failure modes produce a response that is not findings:
+
+- The agent died on a transient API error and returned nothing.
+- A sensitive-data filter blocked its read of the input file and it returned a refusal. An ordinary bind address such as `0.0.0.0` in the diff is enough to trip one. Re-dispatch with the operator's PII bypass token when the refusal names one.
+- The agent narrated a partial read before the H2, meaning it reviewed less than the full change set.
+
+Never record any of these as `No findings.` An area that cannot be covered after a re-dispatch is reported as `Not reviewed` in the summary, naming the reason.
 
 Editing an agent definition does not affect a session already running. Claude Code detects agent files being added or removed, but a session keeps the body it loaded at startup, and a definition reached through a symlink (as dotbot installs them) is not re-read on edit. Restart the session after changing a reviewer.
 
-## Step 5: Consolidate
+## Step 6: Consolidate
 
 Merge the 8 responses into one report. Every finding arrives as a single line already carrying severity, citation, and symbol, so merging is a sort rather than a rewrite. Preserve each line as written.
 
@@ -139,6 +149,7 @@ Base: <BASE short sha> (merge-base with main)
 - Medium: <count>
 - Low: <count>
 - Cross-lane collisions dropped: <count>
+- Areas not reviewed: <none, or area and reason>
 
 ## Findings by Severity
 
