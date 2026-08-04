@@ -48,9 +48,34 @@ git ls-files --others --exclude-standard
 
 Stop when all four signals are empty. Report `No changes against main` and stop.
 
-## Step 3: Read Untracked Files
+## Step 3: Materialize the Input
 
-Read the full content of every file from `git ls-files --others --exclude-standard`.
+Write the whole change set to one file. Reviewers hold `Read` but no `Bash`, so they cannot run git themselves. Passing the diff through eight prompts costs eight copies of it in orchestrator output; writing it once and having each reviewer read it costs one.
+
+```bash
+OUTPUT_DIR="$PROJECT_ROOT/.llmtmp/review-diff"
+mkdir -p "$OUTPUT_DIR"
+find "$OUTPUT_DIR" -mindepth 1 -delete
+INPUT="$OUTPUT_DIR/input.md"
+
+{
+  echo "# Change set vs merge-base ${BASE}"
+  echo; echo "## Commits"; git log --oneline "${BASE}"..HEAD
+  echo; echo "## Status"; git status --porcelain
+  echo; echo "## Diffstat"; git diff "${BASE}" --find-renames --stat
+  echo; echo "## Diff"; git diff "${BASE}" --find-renames
+} > "$INPUT"
+
+for f in $(git ls-files --others --exclude-standard); do
+  { echo; echo "## Untracked file: $f"; cat -n "$f"; } >> "$INPUT"
+done
+
+wc -c "$INPUT"
+```
+
+Untracked files carry no diff representation, so their full contents are appended with line numbers.
+
+`mkdir -p` then `find -delete` rather than `rm -rf`. A `safe-rm` shim on `PATH` (as in some dotfiles setups) moves paths to Trash and exits non-zero on a missing path even under `-f`, which breaks the wipe on a first run.
 
 ## Step 4: Dispatch 8 Reviewers in Parallel
 
@@ -71,29 +96,36 @@ Subagents default to running in the background. A backgrounded fan-out delivers 
 
 Dispatch all 8 every run. Do not skip a perspective based on which files changed.
 
-Each prompt carries the full diff from Step 2, the untracked file contents from Step 3, and this brief:
+Every prompt is identical apart from nothing. Send this, with `<INPUT>` and `<PROJECT_ROOT>` substituted:
 
 ```text
-Audit the changes below through your perspective.
+Read <INPUT>. It holds the commit log, porcelain status, diffstat, full diff
+against the merge-base with main, and the full contents of every untracked
+file. That is the complete change set under review.
 
-Report defects, flaws, risks, and recommendations only. Do not describe
-what works. Do not praise. Do not modify files.
+The project root is <PROJECT_ROOT>. Every path in the diff is relative to it.
+Open any file you need in that tree to confirm a finding and to confirm the
+line number you cite.
 
-Rate each finding High, Medium, or Low. Cite file, line, and symbol.
-A finding without a citation is not a finding.
-
-Emit an H2 header naming your perspective, followed by your findings.
-If you find nothing, or the change does not reach your domain, emit
-exactly that H2 followed by "No findings." and stop.
+Audit this change set. Apply the Ownership table in your instructions: report
+only defect classes you own, and stay silent on the rest.
 
 Return your findings as your response message.
 ```
 
-Do not pack repomix. Every agent has all the context it needs in the prompt.
+The brief stays short on purpose. Severity, citation format, output shape, and lane discipline all live in the agent definitions, so one edit there changes every caller.
+
+Do not pack repomix. The input file holds everything.
+
+A reviewer can die on a transient API error and return nothing. Re-dispatch that one agent before consolidating. Never report a silent loss as `No findings.`, and never let a dead agent's area go unmentioned in the summary.
+
+Editing an agent definition does not affect a session already running. Claude Code detects agent files being added or removed, but a session keeps the body it loaded at startup, and a definition reached through a symlink (as dotbot installs them) is not re-read on edit. Restart the session after changing a reviewer.
 
 ## Step 5: Consolidate
 
-Merge the 8 responses into one report. Where two perspectives report the same defect at the same location, keep the one whose domain owns it and drop the other.
+Merge the 8 responses into one report. Every finding arrives as a single line already carrying severity, citation, and symbol, so merging is a sort rather than a rewrite. Preserve each line as written.
+
+Where two perspectives report the same defect at the same location, keep the one whose domain owns it and drop the other. Count the collisions and report the number. A collision count above 2 means the Ownership table in the agent definitions needs a row for that defect class.
 
 ```markdown
 # Diff Review Report
@@ -106,6 +138,7 @@ Base: <BASE short sha> (merge-base with main)
 - High: <count>
 - Medium: <count>
 - Low: <count>
+- Cross-lane collisions dropped: <count>
 
 ## Findings by Severity
 

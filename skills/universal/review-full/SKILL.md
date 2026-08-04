@@ -39,9 +39,11 @@ TARGET_NAME=$(basename "$TARGET_PATH")
 
 ```bash
 OUTPUT_DIR="$PROJECT_ROOT/.llmtmp/review-full"
-rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
+find "$OUTPUT_DIR" -mindepth 1 -delete
 ```
+
+`mkdir -p` then `find -delete` rather than `rm -rf`. A `safe-rm` shim on `PATH` (as in some dotfiles setups) moves paths to Trash and exits non-zero on a missing path even under `-f`, which breaks the wipe on a first run.
 
 ## Step 3: Pack Codebase
 
