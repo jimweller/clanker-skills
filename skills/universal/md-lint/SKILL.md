@@ -1,6 +1,6 @@
 ---
 name: md-lint
-description: Format and lint markdown files using prettier and markdownlint-cli2. Always use after writing markdown files (*.md) intended for humans.
+description: Format and lint markdown using prettier and markdownlint-cli2. Use after writing markdown intended for a human reader. Skip agent artifacts under .llmtmp/, .llmdocs/, and SKILL.md files.
 context: fork
 ---
 
