@@ -12,6 +12,14 @@ STARTER_CHARACTER = 📡
 
 Capture session state so a follow-up run can continue.
 
+## What the Relay File Is
+
+`.llmtmp/relay.md` is a one-shot message from a dying session to the session that replaces it. It is written once, read once, and then it is garbage.
+
+It is not a plan file. It is not a task list. It is not project state. It has no lifecycle beyond the handoff.
+
+An agent that reads a relay file to resume work does not update it, check items off in it, append progress to it, or keep it in sync with the work. The relay file is stale the moment the next session starts, and that is correct. The only reason to write `.llmtmp/relay.md` again is a fresh `/relay` invocation at the end of another session, which overwrites it wholesale.
+
 ## Process
 
 ### 1. Analyze the Current Session
@@ -106,6 +114,8 @@ After writing the relay:
 
    ```text
    Read .llmtmp/relay.md and continue from where the previous session left off.
+   The relay file is a one-time handoff message. Do not update it, maintain it,
+   or track progress in it.
 ````
 
 3. If there are uncommitted changes, suggest committing first:
@@ -131,3 +141,6 @@ A good relay document should:
 - Don't be vague ("fix the bug") — be specific ("fix the SSE reconnection in `packages/web/src/hooks/useSSE.ts` by adding exponential backoff after the `onclose` handler")
 - Don't skip the "Dead Ends" section — this prevents the most common wasted effort
 - Don't forget the "Key Decisions" section — without it, the next agent may reverse your decisions
+- Don't treat the relay file as a living document — no incremental edits, no checking off boxes, no appending progress as work proceeds
+- Don't re-read the relay file mid-session to see what's left — the conversation is the source of truth once work resumes
+- Don't reference `.llmtmp/relay.md` in commits, PR descriptions, or docs — it is scratch, not an artifact
