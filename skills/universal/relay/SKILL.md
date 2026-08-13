@@ -56,6 +56,8 @@ Save to: `.llmtmp/relay.md` in the current working directory (or the worktree ro
 **Branch:** [current branch name]
 **Last Commit:** [hash + message, or "uncommitted changes"]
 
+> One-time handoff. Read once, do not update.
+
 ## Goal
 
 [1-2 sentences: what we're trying to accomplish. Include the original user request or plan reference.]
@@ -114,8 +116,6 @@ After writing the relay:
 
    ```text
    Read .llmtmp/relay.md and continue from where the previous session left off.
-   The relay file is a one-time handoff message. Do not update it, maintain it,
-   or track progress in it.
 ````
 
 3. If there are uncommitted changes, suggest committing first:
