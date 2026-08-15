@@ -23,77 +23,144 @@ it arrives. Do no research against an unstated question.
 
 ## Sources
 
-Not every run touches every class. Step 3 picks the ones that hold evidence for the questions at
-hand and records why the rest were left out.
+These are labels, not instructions. Reach each one with whatever tool the environment provides.
 
-| Class | Tool | Notes |
-| ----- | ---- | ----- |
-| Jira | `mcg-atlassian:jira` skill, `j` CLI | Load `mcg-jira-prefs` after the main skill. Host `https://mcghealth.atlassian.net` |
-| Confluence | `mcg-atlassian:confluence` skill, `c` CLI | Load `mcg-confluence-prefs` after the main skill. Same host. Read page history for version-level claims |
-| Azure DevOps | `ado` skill, `az` CLI, ADO REST with `$AZURE_DEVOPS_EXT_PAT` | `dev.azure.com/mcgsead`. Commits, PRs, reviewers, branch policy, pipelines, releases |
-| GitHub | `gh` CLI | Same evidence classes as ADO for repos that live there |
-| Local git | `git log`, `git rev-list`, `git blame`, `git show` | Bare `git log` caps at 50 commits in this environment. Use `rev-list` for counts |
-| Slack | slack MCP tools | Channel history, search, permalinks. Coverage is bounded by the querying account |
-| Mail, calendar, Teams | ms365 MCP tools | Microsoft Graph. Mail `$search` needs a double-quoted KQL value |
-| Azure runtime | `az` CLI, `az graph query` | Read-only. Resource state, app settings, network posture, identities |
-| AWS runtime | `aws` CLI, `kubectl` for EKS | Read-only |
-| Cloud inventory | steampipe | Cross-account queries when the CLI path is slow |
-| Cost | Azure Cost Management API, Azure Retail Prices API, AWS Cost Explorer | List price is an upper bound. Label it as such |
-| Code quality | SonarQube | Quality gate history, scan failures |
-| Logs | Sumo Logic | Deploy events, error onset, traffic shape |
-| APM and tracing | Datadog | Traces, monitors, incident and alert history |
-| Terminology | `mcg-lookup` skill | MCG Dictionary. Record absence when a term is missing |
-| Code review | repomix plus the reviewer agents | Automated output is unverified until hand-checked |
-| Agent history | claude-mem search, `transcript-search` skill, total-recall | These record what was said, not what is true. Never cite one as proof of a fact |
-| External docs and vendors | context7, researcher MCP, `defuddle`, WebSearch | Prefer context7 and researcher over the builtin web tools |
+Jira, Confluence, and Slack are the seed. The rest get reached when the evidence points at them.
+Never ask which sources to use.
+
+- Issue trackers and portfolio boards
+- Wikis, design docs, and decision records
+- Chat
+- Mail, calendar, and meeting records
+- Source repos: commits, pull requests, reviewers, branch policy, pipelines, releases
+- The code itself
+- Cloud runtime state
+- Cost and billing
+- Logs, traces, monitors, and incident history
+- Code quality and scan history
+- Dictionaries and terminology registries
+- Agent memory and session transcripts
+- External docs, vendor material, and the web
 
 ## Procedure
 
 1. **Frame the questions.** Restate each question. State the time window the set covers. State the
    scope boundary, meaning whose story this is and whose it is not.
-2. **Establish anchors.** Confirm the identifiers each source needs before any sweep: Jira project
-   keys and epic keys, Confluence space keys and page ids, repo names and ids, Slack channel ids,
-   the mail corpus, cloud subscription and account ids. Record each anchor with the query that
-   confirmed it.
-3. **Select the source classes.** Name which classes from the table hold evidence for these
-   questions and this subject. Most runs use a handful. State which classes are in and which are
-   out, with the reason for each exclusion. The exclusions carry into Method.
-4. **Sweep in parallel.** Dispatch one subagent per selected class. Give each agent the questions,
-   the anchors, the time window, the citation format, and the evidence rules below. Each returns
-   dated, cited findings, not raw query dumps. An agent that finds nothing reports the queries it
-   ran and the empty result, which is evidence of absence bounded by that query.
-5. **Assemble the milestones.** Merge the returned findings into one chronology. Split it into
+2. **Seed sweep.** Dispatch three subagents in parallel, one each against Jira, Confluence, and
+   Slack. Give each the questions, the subject, the time window, the citation format, and the
+   evidence rules below. These three carry the identifiers everything else needs. Each returns
+   dated, cited findings plus the anchors it confirmed: project keys, epic keys, space keys, page
+   ids, channel ids, repo names, environment names, and every other system the record mentions.
+3. **Follow the evidence.** Each round names new ground. A ticket names a repo, a page names a
+   dashboard, a message names an incident or a mailbox. Fan out one subagent per newly named
+   source, in parallel, and keep going until a round turns up nothing new. Judge what is worth
+   chasing and chase it. Do not ask which sources to use, and do not stop at the seed. An agent
+   that finds nothing reports the queries it ran and the empty result, which is evidence of
+   absence bounded by that query.
+4. **Assemble the milestones.** Merge the returned findings into one chronology. Split it into
    named phases. Tag every entry that bears on a question with `[Qn]`.
-6. **Resolve conflicts.** Where a source claim and an artifact disagree, keep both and say which is
+5. **Resolve conflicts.** Where a source claim and an artifact disagree, keep both and say which is
    which. Where two artifacts disagree, keep both and name the discrepancy.
-7. **Write the report.** Follow the output structure below.
-8. **Record method and caveats.** Every access boundary, denial, result cap, and unverified claim.
+6. **Write the report.** Follow the sample below. Same headings, same order, every run.
+7. **Record the method.** Every access boundary, denial, result cap, and unverified claim. Name the
+   sources reached and the ones the record pointed at that this run never got to.
 
-## Output structure
+## Sample report
 
-Sections in this order.
+Every run produces this shape. Same headings, same order, same entry form.
 
-| Section | Contents |
-| ------- | -------- |
-| Title and preamble | Working-document line, last-updated date, and a "Sources so far" sentence naming every system queried |
-| Executive summary | The answer, in prose, for a reader who reads nothing else |
-| Summary | Narrative for a leadership audience. Every figure traces to a section below |
-| Purpose | Q1 through Qn, each with what is established and what stays open |
-| Acronyms | Expansion plus provenance marker: `(dict)`, `(meta)`, `(record)`, or unverified |
-| Cast | People, roles, and the artifact that establishes each role |
-| Milestones | Phases in date order. Each entry: bold date and headline, link line, evidence, `[Qn]` tag |
-| Per-system records | Repo facts, issue-tracker record, runtime state, documentation record, consumer record, cost |
-| Findings | Numbered, one claim each |
-| Open questions | Numbered, each with what would settle it |
-| Method and caveats | Query provenance, access boundaries, denials, caps, and what stays unverified |
+````markdown
+# <Subject>: Evidence Timeline
 
-Milestone entry shape:
+This is a working document. Each milestone carries a slug, a link, and its supporting evidence.
+Amend as new evidence arrives. Last updated YYYY-MM-DD.
 
-```text
-**YYYY-MM-DD. Headline** `[Qn]`
-[Identifier](url) | [Identifier](url)
-Evidence. Quote the source verbatim where the wording carries the claim.
-```
+Sources so far: <system>, <system>, and <system>.
+
+## Executive summary
+
+<The answer to every question, in prose, for a reader who reads nothing else. Sequence and
+measured state. Three to six paragraphs.>
+
+## Summary
+
+<Narrative for a leadership audience. Every figure traces to a section below.>
+
+<Closing paragraph naming what this summary does not assert and which figures are bounded.>
+
+## Purpose
+
+<N> open questions drive this timeline. Entries are tagged `[Q1]` through `[Qn]` where they bear
+on one.
+
+**Q1. <Question>?** <What the record establishes.> <What stays open.>
+
+**Q2. <Question>?** <What the record establishes.> <What stays open.>
+
+## Acronyms
+
+Expansions marked **(dict)** come from a terminology registry. Expansions marked **(meta)** come
+from project or space metadata. Expansions marked **(record)** are established by artifacts in
+this timeline. Unverified entries say so.
+
+| Term | Expansion | Meaning here |
+| ---- | --------- | ------------ |
+| <ABC> | <Expansion> (dict) | <What it refers to in this record> |
+| <XYZ> | <Expansion> (record) | <What it refers to in this record> |
+
+## Cast
+
+| Person | Role | Established by |
+| ------ | ---- | -------------- |
+| <Name> | <Role> | <Artifact and link> |
+
+## Milestones
+
+### Phase 0: <Name>, <start> to <end>
+
+**YYYY-MM-DD. <Headline>** `[Q1]`
+[<ABC-123>](url) | [<Page title>](url)
+<Evidence. Quote the source verbatim where the wording carries the claim.>
+
+**YYYY-MM-DD HH:MM TZ. <Headline>**
+[<Chat>](permalink)
+<Name>: "<verbatim quote>" <What the quote establishes.>
+
+### Phase 1: <Name>, <start> to <end>, <count> <units>
+
+<Entries in date order.>
+
+## <System> record
+
+<One section per system: repo facts, issue-tracker record, runtime state, documentation record,
+consumer record, cost. Sub-sections as the evidence requires.>
+
+| <Metric> | <Value> | Source |
+| -------- | ------- | ------ |
+| <Metric> | <Value> | <Query or link> |
+
+## Findings
+
+1. <One claim, carrying the figure that supports it.>
+2. <One claim, carrying the figure that supports it.>
+
+## Open questions
+
+1. <Question.> <What would settle it.>
+2. <Question.> <What would settle it.>
+
+## Method
+
+<Every claim above is one of three kinds. Name them: a quoted source is a claim by its author on
+that date, a system record is an artifact, a live query result is state observed on that date.
+Where a claim and an artifact disagree, both appear.>
+
+- <Query provenance: tool, host, credential, and date for each system.>
+- <Result caps, and how counts were taken above the expected row count.>
+- <Denials, recorded rather than worked around.>
+- <Sources the record named that this run never reached.>
+- <What stays unverified.>
+````
 
 ## Evidence rules
 
