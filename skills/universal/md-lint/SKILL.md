@@ -1,51 +1,48 @@
 ---
 name: md-lint
-description: Format and lint markdown using prettier and markdownlint-cli2. Use after writing markdown intended for a human reader. Skip agent artifacts under .llmtmp/, .llmdocs/, and SKILL.md files.
-context: fork
+description: What the markdown formatter rewrites and which lint rules it cannot fix. Use before writing markdown intended for a human reader, so the file comes out conforming instead of being reformatted afterward.
 ---
 
 <!-- markdownlint-disable-file MD041 -->
 
 STARTER_CHARACTER = 🔏
 
-# Markdown Lint
+# Markdown Formatter Contract
 
-Format and lint markdown files with auto-fix enabled.
+A PostToolUse hook runs `markdownlint-cli2 --fix` and then `prettier --write` on every markdown file written or edited, excluding `.llmtmp/`, `.llmdocs/`, `SKILL.md`, and plan files. Writing to this contract avoids a rewrite, and a rewrite invalidates the in-context copy of the file.
 
-## Usage
+## What prettier rewrites
 
-If the user specified file paths, process only those markdown files.
-If no files were specified, process all markdown files in the repository (submodule contents excluded).
+| Input | Output |
+| --- | --- |
+| `* item`, `+ item` | `- item` |
+| `1)` ordered marker | `1.` |
+| `*emphasis*` | `_emphasis_` |
+| `__strong__` | `**strong**` |
+| `***` thematic break | `---` |
+| Two or more blank lines | One blank line |
+| Runs of spaces inside a line | Single space |
+| Unpadded table cells | Cells padded to column width |
+| No trailing newline | Trailing newline added |
 
-To fix all markdown files in the repository, run from the git root:
+Prose is not rewrapped. Long lines stay as written.
 
-```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
-cd "$PROJECT_ROOT"
+## What markdownlint fixes
 
-mapfile -t md_files < <({
-  git ls-files '*.md'
-  git ls-files --others --exclude-standard '*.md'
-} | sort -u)
+Missing space after `#`, missing blank lines around headings and fenced blocks, trailing whitespace, and bare URLs.
 
-if [ ${#md_files[@]} -eq 0 ]; then
-  echo "No markdown files to process."
-else
-  prettier --config ~/.prettierrc --write "${md_files[@]}" \
-    && markdownlint-cli2 --config ~/.config/markdownlint/.markdownlint-cli2.jsonc --fix "${md_files[@]}"
-fi
-```
+Four rules are off: MD013 (line length), MD024 (duplicate headings), MD029 (ordered list prefix), MD033 (inline HTML).
 
-`git ls-files` does not recurse into submodules, so submodule contents are skipped automatically. Untracked-but-not-ignored markdown is included via the second `git ls-files --others` invocation.
+## What neither can fix
 
-To fix a specific file (can run from any directory):
+These reach the model as hook feedback and need a manual edit:
 
-```bash
-prettier --config ~/.prettierrc --write "path/to/file.md" && markdownlint-cli2 --config ~/.config/markdownlint/.markdownlint-cli2.jsonc --fix "path/to/file.md"
-```
+- MD003, heading style. Setext headings underlined with `===` or `---` are errors. Use ATX (`#`, `##`).
+- MD025, one H1 per document.
+- MD045, images need alt text.
+- MD042, links need a destination.
+- MD040, fenced code blocks need a language.
 
-## Notes
+## Writing conforming markdown
 
-- Some markdownlint rules (like MD060) are not auto-fixable, but prettier handles them
-- If an error cannot be fixed automatically by prettier, ask the user if you should fix them manually for the user.
-- Submodule contents are excluded automatically. To lint files inside a submodule, run the skill from that submodule's working tree.
+Start with a single `# Title`. Use ATX headings, `-` bullets, `_emphasis_`, `**strong**`, one blank line between blocks, a language on every fence, alt text on every image, and a trailing newline.
