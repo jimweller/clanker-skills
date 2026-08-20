@@ -36,7 +36,7 @@ For each CLAUDE.md/.llmdocs/ pair found, scoped to its directory:
 1. Read current `CLAUDE.md` (if exists)
 2. Compute what changed since docs were last touched. Include committed, staged, unstaged, and untracked work:
 
-````bash
+```bash
 TARGET_DIR=<directory containing CLAUDE.md and .llmdocs/>
 BASELINE=$(git log -1 --format=%H -- "$TARGET_DIR/CLAUDE.md" "$TARGET_DIR/.llmdocs/")
 [ -z "$BASELINE" ] && BASELINE=$(git rev-list --max-parents=0 HEAD)
@@ -45,7 +45,7 @@ git log --oneline ${BASELINE}..HEAD -- "$TARGET_DIR"
 git diff ${BASELINE} -- "$TARGET_DIR" --stat
 git diff ${BASELINE} -- "$TARGET_DIR"
 git ls-files --others --exclude-standard -- "$TARGET_DIR"
-```text
+```
 
 The diff has no `..HEAD` so it spans the baseline through the working tree, including staged and unstaged edits. `ls-files --others` surfaces new untracked files. Files matching `.gitignore` are excluded.
 
@@ -88,7 +88,7 @@ Detailed docs in `.llmdocs/`:
 
 - @.llmdocs/architecture.md — <1-line description>
 - @.llmdocs/data-model.md — <1-line description>
-```text
+```
 
 ### CLAUDE.md Rules
 
@@ -130,7 +130,7 @@ Flat, 1 file per concept. The first 6 files are **required** and must always exi
   ops.md             # Maintenance, operations, runbooks (required)
   security.md        # Trust boundaries, secrets handling, authn/authz, threat model (required)
   <concept>.md       # Domain-specific as needed
-```text
+```
 
 ### Doc File Format
 
@@ -142,7 +142,7 @@ Flat, 1 file per concept. The first 6 files are **required** and must always exi
 ## <Section>
 
 <content: headers, tables, code blocks — no prose paragraphs>
-```text
+```
 
 ### .llmdocs/ Rules
 
@@ -161,4 +161,3 @@ After running, output:
 - Files created/modified
 - CLAUDE.md changes (sections added/updated/removed)
 - Docs updated/created (or "no doc changes needed")
-````

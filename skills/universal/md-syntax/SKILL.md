@@ -27,7 +27,7 @@ Put a single blank line between markdown types/styles. Do not put multiple blank
 
 CORRECT
 
-`````markdown
+```markdown
 ## Heading
 
 paragraph
@@ -37,7 +37,7 @@ paragraph
 
 > block quote
 
-````text
+```
 
 INCORRECT
 
@@ -50,7 +50,7 @@ paragraph
 - list item two
 
 > block quote
-```text
+```
 
 ### Headings not bold
 
@@ -60,7 +60,7 @@ CORRECT
 ### Heading
 
 paragraph
-```text
+```
 
 INCORRECT
 
@@ -68,7 +68,7 @@ INCORRECT
 **heading incorrect bold**
 
 paragraph
-```text
+```
 
 ### Code Blocks
 
@@ -78,13 +78,13 @@ CORRECT with language
 
 ```bash
 #!/bin/bash
-```text
+```
 
 INCORRECT without language
 
 ```text
 #!/bin/bash
-```text
+```
 
 ### Trailing New Line
 
@@ -94,12 +94,10 @@ INCORRECT no trailing newline
 
 ```markdown
 The End.
-```text
+```
 
 CORRECT trailing newline
 
 ```markdown
 The End.
-```text
-````
-`````
+```
