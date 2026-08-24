@@ -34,11 +34,11 @@ context7 indexes official documentation. Always current. No date filtering neede
 
 1. Resolve the library ID:
 
-````text
+```text
 mcp__context7__resolve-library-id
   libraryName: "<library name>"
   query: "<specific question>"
-```text
+```
 
 2. Pick the best match: highest benchmark score + source reputation. Prefer `High` reputation.
 
@@ -48,7 +48,7 @@ mcp__context7__resolve-library-id
 mcp__context7__query-docs
   libraryId: "<resolved ID>"
   query: "<specific question>"
-```text
+```
 
 ### context7 Rules
 
@@ -69,7 +69,7 @@ Google queries must append the current year and the prior year to bias toward re
 ```text
 "terraform aws provider best practices 2025 2026"
 "next.js app router migration guide 2025 2026"
-```text
+```
 
 This applies to all `query` fields sent to researcher tools.
 
@@ -92,7 +92,7 @@ This applies to all `query` fields sent to researcher tools.
 mcp__researcher__search_and_scrape
   query: "<topic> <current_year> <prior_year>"
   num_results: 3-5
-```text
+```
 
 Use 3 results for quick lookups, 5-8 for thorough research.
 
@@ -103,7 +103,7 @@ mcp__researcher__news_search
   query: "<topic>"
   freshness: "week"
   num_results: 5
-```text
+```
 
 **`academic_search` (peer-reviewed sources):**
 
@@ -111,7 +111,7 @@ mcp__researcher__news_search
 mcp__researcher__academic_search
   query: "<research topic>"
   num_results: 5
-```text
+```
 
 **`web_search` then `scrape_page` (selective reading):**
 
@@ -119,7 +119,7 @@ mcp__researcher__academic_search
 mcp__researcher__web_search
   query: "<topic> <current_year> <prior_year>"
   num_results: 5
-```text
+```
 
 Then scrape only the most relevant URLs from the results.
 
@@ -130,7 +130,7 @@ mcp__researcher__sequential_search
   searchStep: "Starting research on <topic>"
   stepNumber: 1
   nextStepNeeded: true
-```text
+```
 
 Track findings across steps. Record sources with quality scores.
 
@@ -155,4 +155,3 @@ Report findings inline in the conversation. Include:
 - Version numbers when relevant
 - Date of source material when available from researcher results
 - Clear statement if information was not found or results were inconclusive
-````

@@ -29,14 +29,14 @@ If the user provided a path with the invocation, treat it as the target director
 
 ### Step 1: Resolve Target and Clean Up
 
-`````text
+```text
 TARGET_PATH = <user-provided path or empty>
 
 If TARGET_PATH is empty or not provided: use git repo root.
 Otherwise: resolve as relative path from repo root.
 
 Derive TARGET_NAME from last path segment, or "repo" if root.
-```text
+```
 
 Validate the target directory exists. Abort if not.
 
@@ -48,7 +48,7 @@ rm -f "$PROJECT_ROOT"/.llmtmp/review-"$TARGET_NAME"-openai.md \
       "$PROJECT_ROOT"/.llmtmp/review-"$TARGET_NAME"-gemini.md \
       "$PROJECT_ROOT"/.llmtmp/review-"$TARGET_NAME"-claude.md
 mkdir -p "$PROJECT_ROOT/.llmtmp" "$PROJECT_ROOT/.llmtmp/review-deep"
-```text
+```
 
 ### Step 2: Pack Repomix
 
@@ -59,7 +59,7 @@ triggers a confusing truncation error in some agent UIs on large repos.
 REVIEW_TMPDIR=$(mktemp -d "/tmp/code-review-XXXXXX")
 REPOMIX_FILE="$REVIEW_TMPDIR/repomix.xml"
 npx repomix -o "$REPOMIX_FILE" --quiet --output-show-line-numbers "$PROJECT_ROOT/$TARGET_PATH"
-```text
+```
 
 `REVIEW_TMPDIR` is unique per run and used for all temp files in this session.
 
@@ -128,7 +128,7 @@ for area in security architecture solid correctness testing ops performance qual
   cat "<STATE_DIR>/<MODEL_LABEL>-$area.md" >> OUTPUT_FILE
   echo "" >> OUTPUT_FILE
 done
-````text
+```
 
 # Step 4: Verify
 
@@ -140,7 +140,7 @@ Do not exit without the file on disk.
 
 Print exactly: REVIEW_COMPLETE"
 
-````text
+````
 
 ### Step 4: Write Prompt to File
 
@@ -156,7 +156,7 @@ PROMPT_FILE="$REVIEW_TMPDIR/review-prompt.txt"
 cat > "$PROMPT_FILE" <<'PROMPT_EOF'
 <the prompt from step 3>
 PROMPT_EOF
-````text
+```
 
 ### Step 5: Launch 3 Agents in Parallel
 
@@ -214,7 +214,7 @@ Report:
 - Total cost: jq -s '[.[] | select(.type=="step_finish") | .part.cost] | add' "$STATE_DIR/<LABEL>.ndjson"
 - Total tokens: grep '"type":"step_finish"' "$STATE_DIR/<LABEL>.ndjson" | tail -1 | jq '.part.tokens.total'
 - Any errors from: grep '"type":"error"' "$STATE_DIR/<LABEL>.ndjson"
-```text
+```
 
 Launch all 3 subagent calls in a single parallel batch (openai, gemini, claude).
 
@@ -229,7 +229,7 @@ Log lines are structured text, one per line:
 
 ```text
 INFO  2026-03-13T00:54:25 +4ms service=default directory=/private/tmp creating instance
-```text
+```
 
 ### Step 6: Wait for Agents
 
@@ -280,7 +280,7 @@ Each opencode process writes NDJSON to `$STATE_DIR/<label>.ndjson`. One JSON obj
   "sessionID": "ses_...",
   "part": { "type": "step-start", "snapshot": "..." }
 }
-```text
+```
 
 **text** - Model emitted text output.
 
@@ -291,7 +291,7 @@ Each opencode process writes NDJSON to `$STATE_DIR/<label>.ndjson`. One JSON obj
   "sessionID": "ses_...",
   "part": { "type": "text", "text": "some output" }
 }
-```text
+```
 
 **tool_use** - Model called a tool. Key fields: `tool` (tool name), `state.status` ("completed" or "error"), `state.input`, `state.output`, `state.metadata.exit` (for bash).
 
@@ -310,13 +310,13 @@ Each opencode process writes NDJSON to `$STATE_DIR/<label>.ndjson`. One JSON obj
     }
   }
 }
-```text
+```
 
 For subagent spawns, `tool` is "task" and `state.output` contains the agent's result text:
 
 ```json
 {"type":"tool_use","timestamp":...,"part":{"tool":"task","state":{"status":"completed","input":{"description":"...","prompt":"..."},"output":"<task_result>...</task_result>"}}}
-```text
+```
 
 **step_finish** - An LLM turn completed. Key fields: `reason` ("stop" = done, "tool-calls" = continuing), `cost`, `tokens`.
 
@@ -337,7 +337,7 @@ For subagent spawns, `tool` is "task" and `state.output` contains the agent's re
     }
   }
 }
-```text
+```
 
 The final `step_finish` with `"reason":"stop"` means the model is done.
 
@@ -345,7 +345,7 @@ The final `step_finish` with `"reason":"stop"` means the model is done.
 
 ```json
 {"type":"error","timestamp":...,"sessionID":"ses_...","error":{"name":"UnknownError","data":{"message":"Model not found: ..."}}}
-```text
+```
 
 ### Useful jq Queries
 
@@ -369,14 +369,14 @@ jq -r 'select(.type=="error") | .error.data.message' "$NDJSON"
 
 # Count subagent spawns
 jq -r 'select(.type=="tool_use" and .part.tool=="task") | .part.state.status' "$NDJSON" | wc -l
-```text
+```
 
 Replace `$LOGFILE` with the text log path (e.g., `<PROJECT_ROOT>/.llmtmp/review-deep/openai.log`):
 
 ```bash
 # All errors and warnings from text logs
 grep -E "^(ERROR|WARN)" "$LOGFILE"
-```text
+```
 
 ## Rules
 
@@ -387,4 +387,3 @@ grep -E "^(ERROR|WARN)" "$LOGFILE"
 - Use plain message invocation, not `--command`. The `--command` flag has a known issue with the context7 MCP server.
 - Do NOT clean up per-area files, NDJSON logs, or text logs. All intermediate artifacts persist for debugging and evals.
 - If a model fails, still wait for and report the others.
-`````

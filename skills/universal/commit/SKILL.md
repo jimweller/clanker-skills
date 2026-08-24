@@ -13,17 +13,17 @@ STARTER_CHARACTER = 📌
 
 ### 1. Review Changes
 
-````bash
+```bash
 git status
 git diff HEAD
 git diff --stat HEAD
-```text
+```
 
 Check for new untracked files:
 
 ```bash
 git ls-files --others --exclude-standard
-```text
+```
 
 ### 2. Stage Files
 
@@ -53,7 +53,7 @@ Write an atomic commit message with a conventional commit tag:
 feat(workflows): add DAG condition evaluator
 fix(web): resolve SSE reconnection on navigation
 refactor(isolation): simplify worktree resolution order
-```text
+```
 
 **Commit message format:**
 
@@ -65,7 +65,7 @@ not just what changed. Include context changes that aren't
 obvious from the diff.]
 
 [Optional: Fixes #123, Closes #456]
-```text
+```
 
 ### 4. Capture AI Context Changes
 
@@ -83,7 +83,7 @@ Context:
 - Surfaced issue: mock.module() in retry tests needs isolated batch
 
 Fixes #482
-```text
+```
 
 **What counts as AI context changes:**
 
@@ -95,4 +95,3 @@ Fixes #482
 - `**/CLAUDE.md` -- folder local rules changes
 
 Git log is long-term memory for future sessions.
-````

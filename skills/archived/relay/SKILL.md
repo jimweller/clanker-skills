@@ -36,12 +36,12 @@ Review everything that happened in this conversation:
 
 ### 2. Gather Current State
 
-````bash
+```bash
 git status
 git diff --stat HEAD
 git log --oneline -5
 git branch --show-current
-```text
+```
 
 ### 3. Write the Relay Document
 
@@ -105,7 +105,7 @@ Document WHY choices were made, not just what was chosen:
 [2-4 sentences: the MOST IMPORTANT thing the next agent needs to know. What's the current situation? What's the biggest risk? What should they do first?]
 
 **Recommended first action:** [Exact command or step to take first]
-```text
+```
 
 ### 4. Confirm and Advise
 
@@ -116,7 +116,7 @@ After writing the relay:
 
    ```text
    Read .llmtmp/relay.md and continue from where the previous session left off.
-````
+```
 
 3. If there are uncommitted changes, suggest committing first:
 
