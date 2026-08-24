@@ -27,7 +27,7 @@ Put a single blank line between markdown types/styles. Do not put multiple blank
 
 CORRECT
 
-```markdown
+```text
 ## Heading
 
 paragraph
@@ -36,19 +36,17 @@ paragraph
 - list item two
 
 > block quote
-
 ```
 
 INCORRECT
 
-```markdown
+```text
 ## Heading
 
-paragraph
 
+paragraph
 - list item one
 - list item two
-
 > block quote
 ```
 
@@ -56,7 +54,7 @@ paragraph
 
 CORRECT
 
-```markdown
+```text
 ### Heading
 
 paragraph
@@ -64,7 +62,7 @@ paragraph
 
 INCORRECT
 
-```markdown
+```text
 **heading incorrect bold**
 
 paragraph
@@ -72,32 +70,24 @@ paragraph
 
 ### Code Blocks
 
-Always specify language
+Always specify language.
 
 CORRECT with language
 
+````text
 ```bash
 #!/bin/bash
 ```
+````
 
 INCORRECT without language
 
-```text
+````text
+```
 #!/bin/bash
 ```
+````
 
 ### Trailing New Line
 
-Always include a single trailing newline so the file ends in a blank line
-
-INCORRECT no trailing newline
-
-```markdown
-The End.
-```
-
-CORRECT trailing newline
-
-```markdown
-The End.
-```
+End the file with a single newline after the last line of content. A fenced example can't show this, because the fence hides the final byte. Check it with `tail -c 1 file.md | xxd`, which must print `0a`.
