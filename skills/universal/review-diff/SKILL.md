@@ -1,6 +1,6 @@
 ---
 name: review-diff
-description: "Review every change on this branch against main across 8 perspectives in parallel. Covers committed, staged, unstaged, and untracked work. Returns one consolidated report."
+description: "Review every change on this branch against main across 9 perspectives in parallel. Covers committed, staged, unstaged, and untracked work. Returns one consolidated report."
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,7 @@ STARTER_CHARACTER = ⚡
 
 # Diff Review
 
-Review everything that differs from `main` across 8 perspectives in parallel. No arguments.
+Review everything that differs from `main` across 9 perspectives in parallel. No arguments.
 
 ## Step 1: Resolve the Base
 
@@ -50,7 +50,7 @@ Stop when all four signals are empty. Report `No changes against main` and stop.
 
 ## Step 3: Materialize the Input
 
-Write the whole change set to one file. Reviewers hold `Read` but no `Bash`, so they cannot run git themselves. Passing the diff through eight prompts costs eight copies of it in orchestrator output; writing it once and having each reviewer read it costs one.
+Write the whole change set to one file. Reviewers hold `Read` but no `Bash`, so they cannot run git themselves. Passing the diff through nine prompts costs nine copies of it in orchestrator output; writing it once and having each reviewer read it costs one.
 
 ```bash
 OUTPUT_DIR="$PROJECT_ROOT/.llmtmp/review-diff"
@@ -94,24 +94,25 @@ On a hit, tell the operator what fired and continue to Step 4 anyway. State that
 
 Blocking is per-read and can be partial. Some reviewers get through while others do not, so Step 5 still has to check every response.
 
-## Step 4: Dispatch 8 Reviewers in Parallel
+## Step 4: Dispatch 9 Reviewers in Parallel
 
-Issue all 8 Agent calls **in a single tool block** with `run_in_background: false`.
+Issue all 9 Agent calls **in a single tool block** with `run_in_background: false`.
 
 Subagents default to running in the background. A backgrounded fan-out delivers its results in later turns, so Step 6 would find nothing to consolidate. Synchronous dispatch in one block is what makes the fleet parallel and the report possible in this turn.
 
-| Perspective           | Agent                   |
-| --------------------- | ----------------------- |
-| Architecture & Design | `reviewer-architecture` |
-| Correctness & Bugs    | `reviewer-correctness`  |
-| Operational Readiness | `reviewer-ops`          |
-| Performance           | `reviewer-performance`  |
-| Code Quality          | `reviewer-quality`      |
-| Security              | `reviewer-security`     |
-| SOLID Principles      | `reviewer-solid`        |
-| Testing               | `reviewer-testing`      |
+| Perspective                     | Agent                   |
+| ------------------------------- | ----------------------- |
+| Architecture & Design           | `reviewer-architecture` |
+| Correctness & Bugs              | `reviewer-correctness`  |
+| Data & Information Architecture | `reviewer-data`         |
+| Operational Readiness           | `reviewer-ops`          |
+| Performance                     | `reviewer-performance`  |
+| Code Quality                    | `reviewer-quality`      |
+| Security                        | `reviewer-security`     |
+| SOLID Principles                | `reviewer-solid`        |
+| Testing                         | `reviewer-testing`      |
 
-Dispatch all 8 every run. Do not skip a perspective based on which files changed.
+Dispatch all 9 every run. Do not skip a perspective based on which files changed.
 
 Every prompt is identical apart from nothing. Send this, with `<INPUT>` and `<PROJECT_ROOT>` substituted:
 
@@ -136,7 +137,7 @@ Do not pack repomix. The input file holds everything.
 
 ## Step 5: Verify Every Response
 
-Check each of the 8 responses before consolidating.
+Check each of the 9 responses before consolidating.
 
 **Strip, do not re-dispatch, for stray prose.** A reviewer that finished a verification step often writes a transitional sentence before its H2. Measured across three identical runs, that happened in 2, 2, and 5 of 8 responses; the swing between identical runs is wider than the swing between wordings of the instruction telling them not to. Prompt tuning does not fix it, so fix it here: discard everything before the first `##` heading and keep the rest. This costs nothing and always works.
 
@@ -151,7 +152,7 @@ Editing an agent definition does not affect a session already running. Claude Co
 
 ## Step 6: Consolidate
 
-Merge the 8 responses into one report. Every finding arrives as a single line already carrying severity, citation, and symbol, so merging is a sort rather than a rewrite. Preserve each line as written.
+Merge the 9 responses into one report. Every finding arrives as a single line already carrying severity, citation, and symbol, so merging is a sort rather than a rewrite. Preserve each line as written.
 
 Where two perspectives report the same defect at the same location, keep the one whose domain owns it and drop the other. Count the collisions and report the number. A collision count above 2 means the Ownership table in the agent definitions needs a row for that defect class.
 

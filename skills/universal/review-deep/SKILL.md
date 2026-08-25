@@ -11,7 +11,7 @@ STARTER_CHARACTER = 🕵️‍♂️
 
 # Code Review Command
 
-Launch 3 independent code reviews in parallel using different models via `opencode run`. The invoking agent packs repomix once, then each model spawns 8 reviewer-* subagents that navigate the packed output via MCP. Each model produces one combined review file.
+Launch 3 independent code reviews in parallel using different models via `opencode run`. The invoking agent packs repomix once, then each model spawns 9 reviewer-* subagents that navigate the packed output via MCP. Each model produces one combined review file.
 
 ## Arguments
 
@@ -97,7 +97,7 @@ Do NOT read REPOMIX_FILE directly.
 
 # Step 2: Spawn review agents
 
-Spawn ALL 8 review agents. Note: opencode executes task calls sequentially (known issue #14195), so agents will run one at a time regardless of how they are requested.
+Spawn ALL 9 review agents. Note: opencode executes task calls sequentially (known issue #14195), so agents will run one at a time regardless of how they are requested.
 Use the agent name `reviewer-<area>` for each. Each agent prompt MUST include:
 - outputId=<the outputId from Step 1>
 - OUTPUT_PATH=<STATE_DIR>/<MODEL_LABEL>-<area>.md
@@ -113,18 +113,19 @@ Areas and agent names:
 - reviewer-ops -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-ops.md
 - reviewer-performance -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-performance.md
 - reviewer-quality -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-quality.md
+- reviewer-data -> OUTPUT_PATH: <STATE_DIR>/<MODEL_LABEL>-data.md
 
 Each agent writes its own per-area file. The agent definitions handle the review logic.
 
 # Step 3: Assemble the review file
 
-After all 8 agents return, assemble the per-area files into the final review file using bash:
+After all 9 agents return, assemble the per-area files into the final review file using bash:
 
 ```bash
 echo "# Code Review: <TARGET_NAME>" > OUTPUT_FILE
 echo "**Model**: MODEL_LABEL" >> OUTPUT_FILE
 echo "" >> OUTPUT_FILE
-for area in security architecture solid correctness testing ops performance quality; do
+for area in security architecture solid correctness testing ops performance quality data; do
   cat "<STATE_DIR>/<MODEL_LABEL>-$area.md" >> OUTPUT_FILE
   echo "" >> OUTPUT_FILE
 done
@@ -203,7 +204,7 @@ When done:
    echo "# Code Review: <TARGET_NAME>" > "<PROJECT_ROOT>/.llmtmp/review-<TARGET_NAME>-<LABEL>.md"
    echo "**Model**: <LABEL>" >> "<PROJECT_ROOT>/.llmtmp/review-<TARGET_NAME>-<LABEL>.md"
    echo "" >> "<PROJECT_ROOT>/.llmtmp/review-<TARGET_NAME>-<LABEL>.md"
-   for area in security architecture solid correctness testing ops performance quality; do
+   for area in security architecture solid correctness testing ops performance quality data; do
      cat "$STATE_DIR/<LABEL>-$area.md" >> "<PROJECT_ROOT>/.llmtmp/review-<TARGET_NAME>-<LABEL>.md" 2>/dev/null
      echo "" >> "<PROJECT_ROOT>/.llmtmp/review-<TARGET_NAME>-<LABEL>.md"
    done

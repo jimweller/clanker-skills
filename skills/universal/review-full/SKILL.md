@@ -1,6 +1,6 @@
 ---
 name: review-full
-description: Whole-codebase review using 8 specialized reviewer agents in parallel against a repomix-packed snapshot.
+description: Whole-codebase review using 9 specialized reviewer agents in parallel against a repomix-packed snapshot.
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,7 @@ STARTER_CHARACTER = 🔎
 
 # Full Review
 
-Review the entire codebase across 8 focus areas in parallel. Each agent reads from a single repomix-packed snapshot via MCP. Output goes to per-area files in `.llmtmp/review-full/`.
+Review the entire codebase across 9 focus areas in parallel. Each agent reads from a single repomix-packed snapshot via MCP. Output goes to per-area files in `.llmtmp/review-full/`.
 
 ## Arguments
 
@@ -64,20 +64,21 @@ Call `attach_packed_output` with `filePath=REPOMIX_FILE`. Record the returned `o
 
 Do not delegate this step to a subagent. The orchestrator must own the `outputId`.
 
-## Step 5: Dispatch 8 Review Agents in Parallel
+## Step 5: Dispatch 9 Review Agents in Parallel
 
-Issue all 8 Agent calls **in a single tool block** with `run_in_background: false`. Subagents default to running in the background, and a backgrounded fan-out delivers its results in later turns, so Step 6 would verify files that no agent has written yet.
+Issue all 9 Agent calls **in a single tool block** with `run_in_background: false`. Subagents default to running in the background, and a backgrounded fan-out delivers its results in later turns, so Step 6 would verify files that no agent has written yet.
 
-| Agent                 | Subagent type           | Output file       |
-| --------------------- | ----------------------- | ----------------- |
-| Architecture & Design | `reviewer-architecture` | `architecture.md` |
-| Correctness & Bugs    | `reviewer-correctness`  | `correctness.md`  |
-| Operational Readiness | `reviewer-ops`          | `ops.md`          |
-| Performance           | `reviewer-performance`  | `performance.md`  |
-| Code Quality          | `reviewer-quality`      | `quality.md`      |
-| Security              | `reviewer-security`     | `security.md`     |
-| SOLID Principles      | `reviewer-solid`        | `solid.md`        |
-| Testing               | `reviewer-testing`      | `testing.md`      |
+| Agent                           | Subagent type           | Output file       |
+| ------------------------------- | ----------------------- | ----------------- |
+| Architecture & Design           | `reviewer-architecture` | `architecture.md` |
+| Correctness & Bugs              | `reviewer-correctness`  | `correctness.md`  |
+| Data & Information Architecture | `reviewer-data`         | `data.md`         |
+| Operational Readiness           | `reviewer-ops`          | `ops.md`          |
+| Performance                     | `reviewer-performance`  | `performance.md`  |
+| Code Quality                    | `reviewer-quality`      | `quality.md`      |
+| Security                        | `reviewer-security`     | `security.md`     |
+| SOLID Principles                | `reviewer-solid`        | `solid.md`        |
+| Testing                         | `reviewer-testing`      | `testing.md`      |
 
 Each review prompt contains:
 
@@ -88,7 +89,7 @@ Each review prompt contains:
 
 ## Step 6: Wait and Verify
 
-After all 8 agents complete, verify each file in `<OUTPUT_DIR>`:
+After all 9 agents complete, verify each file in `<OUTPUT_DIR>`:
 
 1. File exists and is non-empty
 2. First non-blank line is an H2 header (`## <Area>`)
