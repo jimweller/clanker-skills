@@ -1,6 +1,6 @@
 ---
 name: readme
-description: Write documentation based on conversation history and folder contents
+description: Write or update README.md files from folder contents and conversation history. Use when asked to write, refresh, or fix a README.
 argument-hint: "[optional guidance]"
 ---
 
@@ -37,30 +37,67 @@ when deciding what to emphasize in the documentation.
 For each README found, scoped to its directory:
 
 1. Read current README (if exists)
-2. Compute what changed since it was last touched:
+2. Compute what changed since it was last touched. Include committed, staged, unstaged, and untracked work:
 
 ```bash
-TARGET_DIR=$(dirname <target-readme-path>)
-BASELINE=$(git log -1 --format=%H -- <target-readme-path>)
-git diff ${BASELINE}..HEAD --stat -- "$TARGET_DIR"
-git log --oneline ${BASELINE}..HEAD -- "$TARGET_DIR"
+TARGET_README=<path to the README being updated>
+TARGET_DIR=$(dirname "$TARGET_README")
+
+BASELINE=$(git log -1 --format=%H -- "$TARGET_README" 2>/dev/null)
+[ -z "$BASELINE" ] && BASELINE=$(git rev-list --max-parents=0 HEAD 2>/dev/null)
+HEAD_SHA=$(git rev-parse --verify -q HEAD)
+
+if [ -n "$BASELINE" ] && [ "$BASELINE" != "$HEAD_SHA" ]; then
+  git log --oneline "$BASELINE"..HEAD -- "$TARGET_DIR"
+  git diff "$BASELINE" --stat -- "$TARGET_DIR"
+  git diff "$BASELINE" -- "$TARGET_DIR"
+elif [ -n "$HEAD_SHA" ]; then
+  git show --stat HEAD -- "$TARGET_DIR"
+  git diff HEAD --stat -- "$TARGET_DIR"
+  git diff HEAD -- "$TARGET_DIR"
+fi
+
+git status --short -- "$TARGET_DIR"
 ```
+
+`--stat` must come before `--`. Placed after it, git reads it as a pathspec and silently prints the full diff instead of the summary.
+
+Read the `--stat` summary first and let it decide whether to run the full diff. A README with no commit of its own falls back to the root commit, so the full diff can be the entire history of that directory, thousands of lines on a mid-sized repository. When the summary is large, skip the full diff and read the changed files directly.
+
+The diff carries no `..HEAD`, so it spans the baseline through the working tree and includes staged and unstaged edits. The branches cover four states: a README with a commit of its own, a README with none, a repository whose only commit is the root, and a repository with no commits at all. Without them an empty or HEAD-equal baseline makes every command return nothing and the skill wrongly concludes there is nothing to document.
+
+`git status --short` lists staged, unstaged, and untracked paths in one view. Untracked files appear as `??` and their content is in no diff, so read those files directly. Files matching `.gitignore` are excluded throughout.
 
 3. Explore codebase at that directory level and below
 4. Review conversation history for relevant decisions, changes, or lessons learned
 5. Use the diff and conversation context to identify what sections need updating. Verify code against docs and docs against code.
 
+If nothing changed that warrants a README update, say so and move on.
+
 ## README.md Outline
 
-Example document structure for README.md.
+Section order and content for a README.md. Every section is filled from the target project. Omit a section the project has nothing for.
 
-```markdown
+- `# Title` and an overview of no more than five sentences
+- Optional image or video
+- `## Architecture` - components as a bullet list, each with its purpose
+- `## Prerequisites` - accounts, keys, credentials, tools, runtimes, CLIs, each with the reason it is needed
+- `## Project Structure` - folders only, no files, each with a one-line purpose
+- `## Installation` - the commands that install it
+- `## Usage` - the commands that run it
+- `## Testing` - omitted when the project has no tests
+
+Target under 500 lines. Split a longer README by moving detail into a nested README beside the code it describes.
+
+### Shape
+
+````markdown
 # Title
 
-Brief overview. No more than five sentencies.
+Brief overview. No more than five sentences.
 
 <!-- OPTIONAL IMAGE OR VIDEO HIGHLIGHT -->
-<img src="somedemo.png" alt="Some Demo" width="800"/>
+<img src="demo.png" alt="Demo" width="800"/>
 
 ## Architecture
 
@@ -77,52 +114,33 @@ High level components and purpose
 
 Show folder structure. Don't include files.
 
-\`\`\`text
-davit/
+```text
+project/
 ├── src/
-│ ├── davit-api/ # Go API server (k8s client) - see src/davit-api/README.md
-│ ├── davit-ui/ # Go web UI server - see src/davit-ui/README.md
-│ ├── davit-dinghy/ # Alpine dinghy container - see src/davit-dinghy/README.md
-│ └── macos-proto-handler/ # macOS VSCode integration - see src/macos-proto-handler/README.md
-├── scripts/ # Build and deployment scripts
-└── tests/ # Test suites
-\`\`\`
+│   ├── component-a/     # purpose - see src/component-a/README.md
+│   └── component-b/     # purpose - see src/component-b/README.md
+├── scripts/             # purpose
+└── tests/               # purpose
+```
 
 ## Installation
 
-\`\`\`bash
-
-# install manifest
-
-kubectl apply manifest.yaml
-\`\`\`
+```bash
+# how the project is installed
+<install command>
+```
 
 ## Usage
 
-\`\`\`bash
-
-# Build all components
-
-make all
-
-# Or build individually
-
-make build-api
-make build-dinghy
-\`\`\`
-
-## Testing (optional if tests present)
-
-\`\`\`bash
-
-# Run all tests (placeholder)
-
-make test
-
-# Run specific test suites
-
-make test-api
-make test-pod
-make test-integration
-\`\`\`
+```bash
+# how the project is run
+<run command>
 ```
+
+## Testing
+
+```bash
+# how the tests are run
+<test command>
+```
+````

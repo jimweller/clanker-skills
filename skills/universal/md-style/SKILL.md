@@ -9,14 +9,22 @@ description: README style guide for concise, direct documentation. Use when writ
 
 Write concise, direct README files for experienced engineers.
 
+## Voice
+
+Prose style is not defined here. Two sections of the global agent instructions own it, and both
+load every session:
+
+- `Ghostwriting for Other Humans` - a README is read by another human, so it takes the ghostwriting
+  contract: minimum facts, one fact per sentence, the deletion test on every word
+- `Banned Patterns in All Writing` - the catalog of forbidden words and constructions, including
+  hype vocabulary, opposing phrases, phantom-foil contrast, emojis, and emdashes
+
+This skill covers what belongs in a README and in what order.
+
 ## Principles
 
 - **No fluff** - Skip tables of contents, verbose explanations, development history
 - **No roadmaps** - Document current state only, not plans or decisions. Readme is an engineering specification. Not a project plan or changelog.
-- **No repetition** - Each fact appears once
-- **No hype** - Avoid "next generation", "production ready", "powerful", "comprehensive" and similar hyperbole
-- **Direct voice** - State facts, not opinions
-- **No contrasting embellishments** - Avoid like "not just a thing, it's a better thing", "not only a thing, it's something", "more than a"
 
 ## Structure
 
@@ -36,5 +44,3 @@ Sections in order: Overview, Prerequisites, Usage, Architecture, Configuration, 
 - Tables for structured data (components, variables, test coverage)
 - Code blocks for commands and examples
 - Bold for emphasis sparingly
-- No emojis unless explicitly requested
-- No emdashes

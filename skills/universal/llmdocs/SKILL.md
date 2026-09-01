@@ -38,16 +38,31 @@ For each CLAUDE.md/.llmdocs/ pair found, scoped to its directory:
 
 ```bash
 TARGET_DIR=<directory containing CLAUDE.md and .llmdocs/>
-BASELINE=$(git log -1 --format=%H -- "$TARGET_DIR/CLAUDE.md" "$TARGET_DIR/.llmdocs/")
-[ -z "$BASELINE" ] && BASELINE=$(git rev-list --max-parents=0 HEAD)
 
-git log --oneline ${BASELINE}..HEAD -- "$TARGET_DIR"
-git diff ${BASELINE} -- "$TARGET_DIR" --stat
-git diff ${BASELINE} -- "$TARGET_DIR"
-git ls-files --others --exclude-standard -- "$TARGET_DIR"
+BASELINE=$(git log -1 --format=%H -- "$TARGET_DIR/CLAUDE.md" "$TARGET_DIR/.llmdocs/" 2>/dev/null)
+[ -z "$BASELINE" ] && BASELINE=$(git rev-list --max-parents=0 HEAD 2>/dev/null)
+HEAD_SHA=$(git rev-parse --verify -q HEAD)
+
+if [ -n "$BASELINE" ] && [ "$BASELINE" != "$HEAD_SHA" ]; then
+  git log --oneline "$BASELINE"..HEAD -- "$TARGET_DIR"
+  git diff "$BASELINE" --stat -- "$TARGET_DIR"
+  git diff "$BASELINE" -- "$TARGET_DIR"
+elif [ -n "$HEAD_SHA" ]; then
+  git show --stat HEAD -- "$TARGET_DIR"
+  git diff HEAD --stat -- "$TARGET_DIR"
+  git diff HEAD -- "$TARGET_DIR"
+fi
+
+git status --short -- "$TARGET_DIR"
 ```
 
-The diff has no `..HEAD` so it spans the baseline through the working tree, including staged and unstaged edits. `ls-files --others` surfaces new untracked files. Files matching `.gitignore` are excluded.
+`--stat` must come before `--`. Placed after it, git reads it as a pathspec and silently prints the full diff instead of the summary.
+
+Read the `--stat` summary first and let it decide whether to run the full diff. Docs with no commit of their own fall back to the root commit, so the full diff can be the entire history of that directory, thousands of lines on a mid-sized repository. When the summary is large, skip the full diff and read the changed files directly.
+
+The diff carries no `..HEAD`, so it spans the baseline through the working tree and includes staged and unstaged edits. The branches cover four states: docs with a commit of their own, docs with none, a repository whose only commit is the root, and a repository with no commits at all. Without them an empty or HEAD-equal baseline makes every command return nothing and the skill wrongly concludes there is nothing to document.
+
+`git status --short` lists staged, unstaged, and untracked paths in one view. Untracked files appear as `??` and their content is in no diff, so read those files directly. Files matching `.gitignore` are excluded throughout.
 
 3. Explore codebase at that directory level and below
 4. Review conversation history for relevant decisions, changes, or lessons learned
