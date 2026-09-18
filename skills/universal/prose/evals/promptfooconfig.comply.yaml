@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# The compliance loop. A paragraph goes in, the contract rewrites it with a
+# trace, and a judge holding the contract text grades the edit.
+#
+# This suite carries almost no mechanical determinism on purpose. The contract
+# is stylistic and every style-rule has an exemption, so a string assertion
+# cannot encode one. On the first run of the rewrite suite, 36 of 595 failures
+# were the assertion rather than the rule. The output here is an artifact to be
+# read, not a score.
+#
+# The one assertion checks that the judge emitted a parseable VERDICT line. That
+# is a format check, not a style judgment, and it makes a malformed run visible
+# instead of silently scoring zero.
+#
+#   npx promptfoo@latest eval -c promptfooconfig.comply.yaml -o /tmp/comply.json
+#   tools/comply-report.py /tmp/comply.json
+#
+# Cost. The judge carries the whole 44KB contract in its prompt, so a call runs
+# near 12k input tokens. Start with --filter-first-n and --repeat 1.
+description: Compliance loop, prose skill rewrites then a judge grades against the contract
+
+# Nothing in promptfoo caps this below what you ask for. `-j` is --max-concurrency,
+# default 4, also settable as PROMPTFOO_MAX_CONCURRENCY. It collapses to serial in
+# exactly three cases, from adjustConcurrencyForSerialFeatures in the evaluator, being
+# a prompt using the _conversation variable, a test using storeOutputAs, and a browser
+# provider with persistSession. None applies here. Its rate limiter is reactive on HTTP
+# headers and 429s, so it never engages for an exec: provider returning shell stdout.
+#
+# One unit of concurrency is one whole case, not one model call, because the provider
+# runs the rewrite and the judge sequentially inside a single process.
+commandLineOptions:
+  repeat: 3
+  maxConcurrency: 24
+
+prompts:
+  - file://prompts/passage.txt
+
+providers:
+  - id: exec:./providers/rewrite-then-comply.sh
+    label: comply
+
+defaultTest:
+  assert:
+    - type: contains
+      value: "VERDICT violations="
+
+tests:
+  - file://corpus/comply.csv

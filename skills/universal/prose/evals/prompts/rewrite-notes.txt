@@ -1,0 +1,12 @@
+Use the prose skill to rewrite the text between the markers.
+
+When the rewrite is finished, write your notes to {{notes}}, one line per decision, fields separated by a pipe.
+
+FIRED | PC-id | the exact span you changed | what you changed it to
+HELD | PC-id | the exact span you left alone | the exemption that protected it
+
+The notes belong in that file only. Print the rewrite and nothing else.
+
+<<<SOURCE>>>
+{{input}}
+<<<END>>>
