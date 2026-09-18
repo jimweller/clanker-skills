@@ -91,6 +91,49 @@ def write_pool(args) -> int:
     return 0
 
 
+MINUTES = re.compile(
+    r"\b[A-Z][a-z]{2,12}\s+(explained|clarified|raised|described|shared|noted|"
+    r"mentioned|asked|confirmed|suggested|added|presented|questioned|responded|"
+    r"agreed|proposed|flagged|gave|said|walked|reiterated)\b")
+
+
+def page_meta(page_id: str) -> dict:
+    """spaceId, authorId and createdAt for a mined page, empty when it is missing."""
+    path = CORPUS / "raw" / f"{page_id}.json"
+    if not path.is_file():
+        return {}
+    try:
+        page = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return {}
+    return {"space_id": page.get("spaceId", ""), "author_id": page.get("authorId", ""),
+            "created": (page.get("createdAt") or "")[:10], "title": page.get("title", "")}
+
+
+def spread(candidates, n):
+    """Round-robins across spaces then authors, so no page or team dominates the set.
+
+    The previous version sorted by length and took the longest n. That selected for
+    whichever pages happen to carry long paragraphs rather than for a cross-section,
+    and it made space and author coverage an accident. The pool already caps at three
+    paragraphs per page; this caps the influence of a space.
+    """
+    by_space = collections.defaultdict(list)
+    for c in candidates:
+        by_space[c["space_id"] or "unknown"].append(c)
+    for group in by_space.values():
+        group.sort(key=lambda c: (c["author_id"], c["page_id"]))
+    picked, spaces = [], sorted(by_space, key=lambda s: -len(by_space[s]))
+    while len(picked) < n and any(by_space.values()):
+        for s in spaces:
+            if not by_space[s]:
+                continue
+            picked.append(by_space[s].pop(0))
+            if len(picked) >= n:
+                break
+    return picked
+
+
 def select(args) -> int:
     rows = (json.loads(pathlib.Path(args.select).read_text())
             .get("results") or {}).get("results") or []
@@ -98,35 +141,58 @@ def select(args) -> int:
         print("no results in that file", file=sys.stderr)
         return 1
 
+    # Key on __description, which carries the page id as "<page_id>-p<index>". The
+    # previous version keyed on the passage text and so discarded provenance, which
+    # left every selected paragraph untraceable to a Confluence page.
     tally = collections.defaultdict(lambda: {"n": 0, "rewrite": 0, "text": ""})
     for r in rows:
         v = (r.get("testCase") or {}).get("vars") or {}
-        key = str(v.get("passage", ""))
+        desc = str(v.get("__description") or "")
+        if not desc:
+            continue
         out = str((r.get("response") or {}).get("output", "")).lower()
-        tally[key]["n"] += 1
-        tally[key]["text"] = key
+        t = tally[desc]
+        t["n"] += 1
+        t["text"] = str(v.get("passage", ""))
         if "verdict rewrite" in out:
-            tally[key]["rewrite"] += 1
+            t["rewrite"] += 1
 
     # Unanimous picks only. A paragraph the selector was unsure about cannot
     # measure a rewrite, because the baseline arm would be noise.
-    generated = [t["text"] for t in tally.values() if t["n"] and t["rewrite"] == t["n"]]
-    generated.sort(key=len, reverse=True)
-    picked = generated[: args.n]
+    candidates = []
+    for desc, t in tally.items():
+        if not (t["n"] and t["rewrite"] == t["n"]):
+            continue
+        page_id = desc.rsplit("-p", 1)[0]
+        text = t["text"]
+        candidates.append({"page_id": page_id, "text": text,
+                           "words": len(text.split()),
+                           "genre": "minutes" if MINUTES.search(text) else "prose",
+                           **{"space_id": "", "author_id": "", "created": "", "title": "",
+                              **page_meta(page_id)}})
 
-    out = CORPUS / "launder.csv"
+    picked = spread(candidates, args.n)
+
+    out = CORPUS / "comply.csv"
     with out.open("w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["__description", "words", "passage", "__expected1"])
-        for i, text in enumerate(picked):
-            w.writerow([f"launder-{i:03d}", len(text.split()), text, "icontains:VERDICT human"])
+        w.writerow(["__description", "words", "passage", "page_id", "space_id",
+                    "author_id", "created", "genre"])
+        for i, c in enumerate(picked):
+            w.writerow([f"launder-{i:03d}", c["words"], c["text"], c["page_id"],
+                        c["space_id"], c["author_id"], c["created"], c["genre"]])
 
     judged = len(tally)
-    print(f"pool {judged} paragraphs, {len(generated)} judged needing a rewrite every time "
-          f"({100*len(generated)/judged:.0f}%)")
+    print(f"pool {judged} paragraphs, {len(candidates)} judged needing a rewrite every "
+          f"time ({100 * len(candidates) / judged:.0f}%)")
     print(f"wrote {out.relative_to(EVAL_ROOT)}  {len(picked)} paragraphs")
     if picked:
-        print(f"  median {statistics.median(len(p.split()) for p in picked):.0f} words")
+        print(f"  median {statistics.median(c['words'] for c in picked):.0f} words")
+        print(f"  {len({c['space_id'] for c in picked})} spaces, "
+              f"{len({c['author_id'] for c in picked})} authors, "
+              f"{len({c['page_id'] for c in picked})} pages")
+        g = collections.Counter(c["genre"] for c in picked)
+        print(f"  genre: {dict(g)}")
     return 0
 
 

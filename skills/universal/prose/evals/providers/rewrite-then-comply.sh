@@ -13,21 +13,17 @@
 # versioned and visible in the run and keeps the persona, the chat register and
 # the LSP rules out of a grader that has no use for them.
 #
-# --setting-sources project alone does not deliver that. Measured on 2.1.252,
-# a session started with the flag inside this repo still loads the whole
-# contract, and quotes the `synthetic negation` rule verbatim even though that
-# string appears nowhere in any project file here. The same probe from /tmp
-# replies NO RULE. ~/.claude/CLAUDE.md is a symlink into configs/claude-code/ in
-# this repo, so a plausible mechanism is Claude Code resolving the link and
-# classifying the real path as a project source. That mechanism is unverified.
-# The behaviour is not.
+# --bare gives that directly. It skips hooks, LSP and plugin filtering, and it loads
+# no CLAUDE.md, so a judge started anywhere holds nothing but its prompt. Probed from
+# inside this repo it answers NO RULE when asked to quote PC-synthetic-negation.
 #
-# So the judge runs with its cwd outside the repo as well as with the flag.
-# Do not remove the cd, and re-run tools/probe-judge.sh after touching this.
+# It replaces --setting-sources project plus a temp-directory jail. That flag alone
+# does not isolate a session whose cwd sits inside this repo, because ~/.claude/CLAUDE.md
+# is a symlink into it, so the earlier version had to cd elsewhere first. --bare removes
+# the cwd dependency. It costs nothing measurable, 25s against 21s on one case.
 #
-# The judge sees the original as well as the edit, which the provenance judge
-# deliberately did not. Over-application is invisible from the output alone,
-# since a span that was deleted leaves nothing behind to quote.
+# The judge sees the original as well as the edit. Over-application is invisible from
+# the output alone, since a deleted span leaves nothing behind to quote.
 #
 # promptfoo exec provider. Receives the passage as $1 and prints one artifact
 # carrying the rewrite, the editor notes, and the findings.
@@ -39,18 +35,39 @@ MID="$(mktemp)"
 trap 'rm -f "$SRC" "$MID"' EXIT
 printf '%s' "$1" >"$SRC"
 
-# The rewriter loads the contract. That is the thing under test.
+# The rewriter loads the contract and the prose skill. That is the thing under test.
+#
+# --setting-sources project drops user settings, which is where this machine's hooks
+# live. On one 213-call run the claude-mem worker went unreachable for 65 consecutive
+# hooks and some sessions returned the block banner in place of a rewrite, which the
+# judge then graded as prose. That produced 10 PC-assistant-tool-leaks findings and 21
+# runs with no notes file.
+#
+# The contract and the skill both survive the flag, because ~/.claude/CLAUDE.md is a
+# symlink into this repo, so from a cwd inside it they resolve as project sources.
+# --bare would also drop hooks but strips the contract and the skill with them, which
+# removes the thing under test. Verified by probe: under --bare the session answers no
+# to holding a <prose-contract> block and cannot invoke the prose skill.
 #
 # Write is allowed so the editor can put its notes in a file instead of in stdout.
 # --allowedTools is variadic, so a flag has to follow it or it swallows the prompt
 # argument and claude exits with "Input must be provided".
 args=(-p --strict-mcp-config --allowedTools Write --output-format text
+      --setting-sources project
       --mcp-config '{"mcpServers":{}}' --no-session-persistence)
 [[ -n "${EVAL_MODEL:-}" ]] && args+=(--model "$EVAL_MODEL")
 
-judge_args=(-p --output-format text --strict-mcp-config --setting-sources project
+judge_args=(-p --output-format text --strict-mcp-config --bare
             --mcp-config '{"mcpServers":{}}' --no-session-persistence)
-[[ -n "${EVAL_MODEL:-}" ]] && judge_args+=(--model "$EVAL_MODEL")
+JM="${JUDGE_MODEL:-${EVAL_MODEL:-}}"
+[[ -n "$JM" ]] && judge_args+=(--model "$JM")
+
+# Medium effort, measured against the judge's own noise floor rather than assumed.
+# Re-judging 48 stored rewrites with the same model and settings twice agreed on
+# 39 percent of findings and 81 percent of clean-or-dirty verdicts. Opus at medium
+# scored 30 and 79 against that floor, so it cannot be shown to differ. Sonnet
+# scored 21 and 67, which is below the floor, and is not a substitute at any effort.
+judge_args+=(--effort "${JUDGE_EFFORT:-medium}")
 
 strip_glyph() { perl -CSD -pe 'if ($. == 1) { s/^(?:[^\x00-\x7F]+\s*)+// }'; }
 
@@ -93,6 +110,4 @@ cat "$MID"
 printf '<<<NOTES>>>\n'
 cat "$NOTES" 2>/dev/null || printf 'NO NOTES FILE\n'
 printf '<<<FINDINGS>>>\n'
-JAIL="$(mktemp -d)"
-trap 'rm -f "$SRC" "$MID"; rm -rf "$JAIL"' EXIT
-(cd "$JAIL" && claude "${judge_args[@]}" "$judge_prompt") | strip_glyph
+claude "${judge_args[@]}" "$judge_prompt" | strip_glyph

@@ -2,7 +2,7 @@ You are grading an edit against a written prose contract. The contract is reprod
 
 Two kinds of defect exist and they are opposites.
 
-A violation is a span in the EDITED text that a style-rule bans and no exemption covers. The editor missed it, or repaired it halfway.
+A violation is a span in the EDITED text that a rule bans and no exemption covers. The editor missed it, or repaired it halfway.
 
 An over-application is a span in the ORIGINAL text that an exemption protected, which the editor changed or deleted anyway. Cite the exemption.
 

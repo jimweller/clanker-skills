@@ -4,7 +4,7 @@
 The two enumerations disagree in four distinct ways, and each one points at a
 different repair in the contract. That is the whole reason both sides enumerate.
 
-    fired-then-over-applied   The editor applied style-rule R and the judge says
+    fired-then-over-applied   The editor applied rule R and the judge says
                               an exemption covered the span. The exemption is
                               too weak, or its markers read as an unconditional
                               ban.
@@ -90,9 +90,12 @@ def parse_trace(block: str):
         cells = [c.strip() for c in line.split("|")]
         if len(cells) < 3:
             continue
-        if cells[0].upper() == "FIRED":
+        # FIRED and HELD are the older tags. Runs stored before the prompt switched
+        # to plain language still parse, so a baseline stays comparable.
+        tag = cells[0].upper()
+        if tag in ("VIOLATED", "FIRED"):
             fired[norm(cells[1])] = cells[1]
-        elif cells[0].upper() == "HELD":
+        elif tag in ("NOT VIOLATED", "HELD"):
             held[norm(cells[1])] = cells[1]
     return fired, held, malformed
 
@@ -115,7 +118,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("result_json")
     ap.add_argument("--show", type=int, default=3, help="examples per bucket")
-    ap.add_argument("--rule", help="only this style-rule")
+    ap.add_argument("--rule", help="only this rule id")
     args = ap.parse_args()
 
     rows = (json.loads(pathlib.Path(args.result_json).read_text())
@@ -131,6 +134,43 @@ def main() -> int:
     n = clean = malformed_n = unparsed = 0
     viol_total = over_total = 0
 
+    # One judge pass finds roughly 39 percent of what a second pass on the same text
+    # finds, measured by re-judging 48 stored rewrites with the same model and
+    # settings. Counting every occurrence therefore scores a defect caught in all
+    # three repeats at 3 and one caught once at 1, which ranks by how reliably the
+    # judge notices a rule rather than by how often the editor breaks it.
+    #
+    # Deduplicating on case, rule and kind takes the union across repeats instead.
+    # Precision is already good, since 8 of 9 findings read by hand against source
+    # and rewrite were correct, so the union raises recall without adding false
+    # positives. Three passes at a 39 percent per-pass rate reach roughly 78 percent.
+    #
+    # Case-level clean rate is unaffected and stays the most reliable number here,
+    # agreeing 81 percent across two identical judge runs.
+    seen_findings = set()
+    repeats = collections.Counter()
+    # comply.csv carries genre since the selection started recording provenance.
+    # Meeting minutes are AI-transcribed attributed speech rather than authored
+    # prose, and they score differently, so they are reported apart rather than
+    # averaged into the headline.
+    by_genre = collections.defaultdict(lambda: [0, 0])
+
+    # The editor's notes vary between repeats the same way the judge's findings do,
+    # so bucketing a deduped finding against one arbitrary run's notes loses the
+    # trace. Union the notes per case first, then a rule counts as considered if the
+    # editor mentioned it on any pass.
+    notes_fired = collections.defaultdict(dict)
+    notes_held = collections.defaultdict(dict)
+    for r in rows:
+        out = ((r.get("response") or {}).get("output") or "")
+        if not isinstance(out, str) or "<<<FINDINGS>>>" not in out:
+            continue
+        v = (r.get("testCase") or {}).get("vars") or {}
+        case = v.get("__description") or (r.get("testCase") or {}).get("description") or "?"
+        f, h, _ = parse_trace(split_artifact(out).get("NOTES", ""))
+        notes_fired[case].update(f)
+        notes_held[case].update(h)
+
     for r in rows:
         out = ((r.get("response") or {}).get("output") or "")
         if not isinstance(out, str) or "<<<FINDINGS>>>" not in out:
@@ -141,9 +181,20 @@ def main() -> int:
             or (r.get("testCase") or {}).get("description") or "?"
         parts = split_artifact(out)
         source = ((r.get("testCase") or {}).get("vars") or {}).get("passage", "")
-        fired, held, malformed = parse_trace(parts.get("NOTES", ""))
+        _, _, malformed = parse_trace(parts.get("NOTES", ""))
         malformed_n += malformed
+        fired, held = notes_fired[case], notes_held[case]
         findings = parse_findings(parts.get("FINDINGS", ""))
+
+        # "expect" records the judgment a reader should reach on the source, so
+        # restraint and repair score separately. `good` is prose already written to
+        # the contract, where a rewrite should change almost nothing.
+        v = (r.get("testCase") or {}).get("vars") or {}
+        klass = v.get("expect") or v.get("genre")
+        if klass:
+            by_genre[klass][0] += 1
+            if not findings:
+                by_genre[klass][1] += 1
 
         if not findings:
             clean += 1
@@ -153,6 +204,11 @@ def main() -> int:
             key = norm(f["rule"])
             if args.rule and args.rule.lower() not in f["rule"].lower():
                 continue
+            dedupe = (case, key, f["kind"])
+            repeats[dedupe] += 1
+            if dedupe in seen_findings:
+                continue
+            seen_findings.add(dedupe)
             if f["kind"] == "over-applied":
                 over_total += 1
                 bucket = "fired-then-over-applied" if key in fired else "over-applied-untraced"
@@ -172,9 +228,18 @@ def main() -> int:
             per_rule[f["rule"]][bucket] += 1
             buckets[bucket].append((case, f))
 
-    print(f"cases parsed {n}, clean {clean}, missing notes {malformed_n}, "
-          f"unparsed responses {unparsed}")
-    print(f"violations {viol_total}, over-applications {over_total}")
+    print(f"runs parsed {n}, clean runs {clean} ({clean / n * 100:.0f}%), "
+          f"missing notes {malformed_n}, unparsed {unparsed}")
+    if by_genre:
+        for g in sorted(by_genre):
+            gn, gc = by_genre[g]
+            print(f"  {g:<8} {gn:>3} runs, clean {gc:>3} ({gc / gn * 100:.0f}%)")
+    print(f"distinct findings, deduped across repeats: "
+          f"violations {viol_total}, over-applications {over_total}")
+    if repeats:
+        once = sum(1 for v in repeats.values() if v == 1)
+        print(f"reproducibility: {len(repeats)} distinct findings, "
+              f"{once} seen in only one pass ({once / len(repeats) * 100:.0f}%)")
     if unknown:
         print(f"\n{sum(unknown.values())} findings cite an id the contract does not define:")
         for rid, k in unknown.most_common(10):
@@ -188,7 +253,7 @@ def main() -> int:
         if buckets[b]:
             print(f"{b:<26} {len(buckets[b])}")
 
-    print("\nstyle-rules by total findings")
+    print("\nrules by total findings")
     ranked = sorted(per_rule.items(), key=lambda kv: -sum(kv[1].values()))
     for rule, counts in ranked[:15]:
         detail = " ".join(f"{k}={v}" for k, v in counts.most_common())
