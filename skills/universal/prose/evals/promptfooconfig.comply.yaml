@@ -28,17 +28,26 @@ description: Compliance loop, prose skill rewrites then a judge grades against t
 #
 # One unit of concurrency is one whole case, not one model call, because the provider
 # runs the rewrite and the judge sequentially inside a single process.
-# Measured: 24 cases at -j 24 ran 6.2 cases/min, 48 cases at -j 48 ran 10.7. That is
-# 1.73x for double the slots, sublinear but real. 48 concurrent sessions held 11.5 GB
-# resident with free memory flat at 75 percent, and load hit 24.6 on 14 cores, so CPU
-# is where the next ceiling shows up rather than memory.
+# Measured throughput: 6.2 cases/min at -j 24, 10.7 at -j 48, 20.3 at -j 96. Scaling
+# held near-linear to 96, and a 213-call arm runs in 5 to 6 minutes there against 20
+# at -j 48. 96 concurrent sessions held 16.8 GB resident, 175 MB each, with free
+# memory at 52 percent.
+#
+# Load average spikes to about 140 on 14 cores for the first minute, which is 96 CLI
+# processes booting rather than contention, and settles near 45 once they are waiting
+# on the API. Do not read that spike as saturation.
+#
+# Foundry is not the limit. At -j 96 the run draws roughly 1M input tokens/min against
+# a 2M ITPM Opus allocation, and that count is pessimistic because it charges the
+# contract and catalog on every call when both are cache reads after the first, which
+# are excluded from ITPM.
 #
 # Repeats are not noise-averaging here. One judge pass finds about 39 percent of what
 # a second pass on the same text finds, so three passes are a recall mechanism and
 # tools/comply-report.py takes their union.
 commandLineOptions:
   repeat: 3
-  maxConcurrency: 48
+  maxConcurrency: 96
 
 prompts:
   - file://prompts/passage.txt

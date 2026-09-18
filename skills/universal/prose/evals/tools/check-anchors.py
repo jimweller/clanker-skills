@@ -73,6 +73,17 @@ def main() -> int:
     if dangling:
         failures.append(f"[move N] tags with no move defined: {sorted(dangling)}")
 
+    # The provider rebuilds corpus/catalog.md only when the contract's mtime is newer.
+    # A git checkout restoring an older contract carries a newer mtime and defeats
+    # that, leaving the judge grading against rules nobody deployed. Compare content.
+    cat = EVAL_ROOT / "corpus" / "catalog.md"
+    if cat.is_file():
+        if cat.read_text().strip() != body.strip():
+            failures.append("corpus/catalog.md differs from the contract, "
+                            "so the judge grades against a stale rule set")
+    else:
+        print("corpus/catalog.md absent, the provider will build it on the next run")
+
     known = set(ids)
     used = collections.Counter()
     for f in sorted(glob.glob(str(EVAL_ROOT / "cases" / "*.csv"))):

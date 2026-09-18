@@ -71,15 +71,27 @@ judge_args+=(--effort "${JUDGE_EFFORT:-medium}")
 
 strip_glyph() { perl -CSD -pe 'if ($. == 1) { s/^(?:[^\x00-\x7F]+\s*)+// }'; }
 
-# The contract is the judge's whole rule set, so a stale copy grades against
-# rules that are no longer deployed. Rebuild whenever the source file moves.
+# The contract is the judge's whole rule set, so a stale copy grades against rules
+# that are no longer deployed. Rebuild whenever the source file moves.
+#
+# JUDGE_CATALOG pins it instead, which is how an A/B on a contract edit gets a clean
+# read. Both sides otherwise load the same contract, so sharpening a rule teaches the
+# judge what to look for at the same moment it tells the editor what to do, and the
+# two effects cannot be separated. Measured: adding a modality clause to
+# PC-add-nothing raised its finding count, and one finding cited the new clause by
+# name while faulting the editor. That was a detector, not a repair.
+#
+# For an A/B, copy the pre-edit catalog aside and point JUDGE_CATALOG at it. Any
+# movement is then the editor. The pinned copy grades against rules the editor no
+# longer has, so use it only for the comparison and not for an absolute number.
 CONTRACT="${CONTRACT_FILE:-$EVAL_ROOT/../../../../../../configs/claude-code/claude_md.md}"
-CAT="$EVAL_ROOT/corpus/catalog.md"
-if [[ ! -f "$CAT" || "$CONTRACT" -nt "$CAT" ]]; then
+CAT="${JUDGE_CATALOG:-$EVAL_ROOT/corpus/catalog.md}"
+if [[ -z "${JUDGE_CATALOG:-}" ]] && { [[ ! -f "$CAT" ]] || [[ "$CONTRACT" -nt "$CAT" ]]; }; then
   TMP_CAT="$(mktemp)"
   python3 "$EVAL_ROOT/tools/extract-catalog.py" "$TMP_CAT"
   mv -f "$TMP_CAT" "$CAT"
 fi
+[[ -f "$CAT" ]] || { printf 'no catalog at %s\n' "$CAT" >&2; exit 1; }
 
 # The rewrite prompt invokes the prose skill and says nothing about how to write. A
 # guard against a defect hides the defect. Telling the editor to invent no numbers
