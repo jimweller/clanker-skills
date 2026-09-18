@@ -59,6 +59,47 @@ the judge's findings.
 | `over-applied-untraced`   | Cut a protected span without recording the rule at all                    |
 | `unseen-violation`        | The judge cites a rule the notes never mention                            |
 
+## Where the numbers stand
+
+| | Clean |
+| --- | --- |
+| Sources, judged with no edit at all | 7% |
+| After the prose skill rewrites them | 70% |
+| Ceiling, what a perfect editor could score | about 82% |
+
+The source paragraphs are not compliant. Judging all 71 unmodified scores 7 percent
+clean, and the `good` arm scores 0. Those are the paragraphs the contract was
+written from, and "written from" is not "satisfies." Taking 7 to 70 is the measure
+of what the contract does.
+
+Split by class, on the current contract with the judge pinned to the pre-edit
+catalog:
+
+| Class | Clean |
+| --- | --- |
+| `good` | 83% |
+| `mixed` | 67% |
+| `slop` | 56% |
+
+### The target is 80 percent, not 95
+
+A paragraph one judge pass calls clean is called clean again 82 percent of the
+time, 14 of 17 measured on identical re-judges. The judge spuriously flags about
+one clean paragraph in six, so a perfect editor producing perfectly compliant prose
+still caps near 82 on this instrument. The noise runs both ways: a paragraph called
+dirty comes back clean on a second pass 8 times in 31.
+
+Treat any run above 78 percent as at the ceiling rather than as an improvement.
+Targeting 90 or 95 means targeting a number the instrument cannot produce, and the
+only way to reach it is to make the judge less strict, which is not the same as
+better prose.
+
+Two ways to raise the ceiling itself, neither tried. Run the judge more than once
+per case and take a majority, which trades runtime for precision and is cheap at
+`-j 96`. Or narrow what the judge grades, since it holds all 76 rules at once and
+Anthropic's own guidance is that an isolated judge per dimension beats one judge
+holding every dimension.
+
 ## What this instrument can and cannot measure
 
 **Only the clean rate is reliable.** Re-judging 48 stored rewrites with the same
@@ -85,6 +126,31 @@ cp corpus/catalog.md /tmp/catalog-pinned.md
 JUDGE_CATALOG=/tmp/catalog-pinned.md npx promptfoo@latest eval \
   -c promptfooconfig.comply.yaml --repeat 3 -j 96 -o /tmp/after.json
 ```
+
+**Run an A/B twice before believing it.** The first pinned-judge A/B moved clean
+from 62 to 66 percent, which is inside the noise. The repeat landed at 70, and the
+two post-edit runs agreed with each other more closely than either agreed with the
+baseline, which is what made the movement credible. One run is a direction, two are
+a result.
+
+### Measuring the source baseline
+
+Judging the sources with the rewrite set equal to the source gives the floor, and
+the harness has no config for it. Stage the pairs by hand.
+
+```bash
+mkdir -p /tmp/ceil
+python3 - <<'PY'
+import csv, pathlib
+for r in csv.DictReader(open("corpus/comply.csv")):
+    d = pathlib.Path("/tmp/ceil")/r["__description"]; d.mkdir(exist_ok=True)
+    (d/"source.txt").write_text(r["passage"])
+    (d/"rewrite.txt").write_text(r["passage"])
+PY
+```
+
+Then render `prompts/comply.txt` against each pair and run the judge with `--bare`.
+71 calls at `-P 48` takes under a minute.
 
 ## Isolation
 
@@ -312,3 +378,27 @@ preserve rows. The compliance loop runs 71 paragraphs at three repeats, 213 call
 
 Twenty of the 76 rules have no rewrite-suite case. `check-anchors.py` lists them and
 does not fail, because a rule is allowed to exist before anyone writes a case.
+
+## Open
+
+**The 70 percent is not attributed.** Three contract changes landed in the same
+A/B: the worked paragraph, the `PC-emdashes` trim, and the `PC-evidential-status`
+compression. Removing the worked paragraph and re-running with the judge still
+pinned separates them, and the answer decides what the next edits look like. If the
+example carries the gain, write more worked paragraphs. If the trims do, trim the
+other overloaded rules.
+
+**The quotable number is still unmeasured.** 70 percent was measured with the judge
+pinned to the pre-edit catalog. The deployed configuration has the judge on the
+current one, and that run has not happened.
+
+**The `good` arm damages about one run in six.** The diagnosis is specific and not
+what it looks like. The editor is not over-applying there. It is editing text that
+needed no edit and introducing defects doing it: a trailing anaphor, a gerund
+subject, a nominalization in the subject slot, a reassigned attribution. That points
+at a missing stop condition rather than a wrong rule.
+
+**`PC-add-nothing` leads every run** at 28 of 74 findings, almost all self-inflicted.
+The editor drops modals, tenses and scoping quantifiers, turning "worked that day"
+into "were working" and "sometimes for days or even weeks" into "for days or even
+weeks." A modality clause was added to the rule and did not move the number.
