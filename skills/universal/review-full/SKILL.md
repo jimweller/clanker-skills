@@ -113,6 +113,7 @@ Files reviewed: <count from repomix>
 | --------------------- | ---- | ------ | --- |
 | Architecture & Design | <N>  | <N>    | <N> |
 | Correctness & Bugs    | <N>  | <N>    | <N> |
+| Data & Information    | <N>  | <N>    | <N> |
 | Operational Readiness | <N>  | <N>    | <N> |
 | Performance           | <N>  | <N>    | <N> |
 | Code Quality          | <N>  | <N>    | <N> |
@@ -124,6 +125,7 @@ Files reviewed: <count from repomix>
 
 - `.llmtmp/review-full/architecture.md`
 - `.llmtmp/review-full/correctness.md`
+- `.llmtmp/review-full/data.md`
 - `.llmtmp/review-full/ops.md`
 - `.llmtmp/review-full/performance.md`
 - `.llmtmp/review-full/quality.md`

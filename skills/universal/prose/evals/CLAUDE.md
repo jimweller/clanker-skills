@@ -17,9 +17,10 @@ opens with a `PC-` id. dotbot symlinks the file to `~/.claude/CLAUDE.md` and to
 
 ```bash
 cd skills/universal/prose/evals
-npx promptfoo@latest eval                                # rewrite suite, 595 cases
-npx promptfoo@latest eval -c promptfooconfig.comply.yaml # compliance loop, 71 paragraphs
-tools/comply-report.py /tmp/out.json                     # triage the compliance run
+npx promptfoo@latest eval                                  # rewrite suite, 595 cases
+npx promptfoo@latest eval -c promptfooconfig.comply.yaml   # compliance loop, 71 paragraphs
+npx promptfoo@latest eval -c promptfooconfig.generate.yaml # generation loop, 15 fact sheets
+tools/comply-report.py /tmp/out.json                       # triage either loop's run
 ```
 
 No install step. The providers authenticate through whatever Claude Code already
@@ -59,6 +60,101 @@ the judge's findings.
 | `over-applied-untraced`   | Cut a protected span without recording the rule at all                    |
 | `unseen-violation`        | The judge cites a rule the notes never mention                            |
 
+## What the generation loop measures
+
+The compliance loop only ever grades a rewrite of prose that already exists, so it
+cannot check for an invented or dropped fact, and it cannot catch a rule that only
+bites during first-draft composition rather than editing. `promptfooconfig.generate.yaml`
+runs a second loop for that: a fact sheet in `cases/generate.csv` goes in, a writer
+composes one paragraph under the prose contract, and the same judge prompt grades
+the paragraph with the sheet standing in as the ORIGINAL. `prompts/comply.txt` needed
+no change, since it already grades an EDITED text against an ORIGINAL with no
+assumption that the original was prose.
+
+Each sheet is discrete facts, no sentences, so every fact the paragraph states either
+is on the sheet or is not. Each sheet carries five elements, each tempting a specific
+rule group: two facts with a causal link (em-dashes, semicolons, colons, marker
+substitution), a tradeoff or rejected alternative (phantom-foil, opposing phrases),
+four or more parallel items (parallel triads, coordination), a hedged or bounded claim
+(evidential-status, hedging adjuncts, flattened calibration), and a scoping quantifier,
+modal, or tense that matters (`PC-add-nothing`). 15 sheets across three topic shapes:
+an incident with a root cause and a costed mitigation, a capacity decision with a
+number, a deadline, and a rejected option, and a migration with a measured benefit and
+an unmeasured risk.
+
+`providers/generate-then-comply.sh` mirrors `rewrite-then-comply.sh`: the writer gets
+`--setting-sources project`, the judge gets `--bare`, and the artifact carries the same
+`<<<REWRITE>>>` / `<<<NOTES>>>` / `<<<FINDINGS>>>` markers, so `tools/comply-report.py`
+runs against it unmodified. One caveat specific to this loop: the `self-inflicted`
+bucket keys on whether a violating span appears verbatim in the source, and a fact
+sheet's bullet phrasing never matches a composed sentence's wording, so nearly every
+violation on this arm reads as `self-inflicted` regardless of whether the paragraph
+actually invented anything. Read the clean rate on this arm; do not read its bucket
+split the way the rewrite arm's is read.
+
+First measurement, 15 sheets at 3 repeats, 45 calls: 49 percent clean. The two largest
+rule concentrations were `PC-add-nothing` (the writer drops a modal or a scoping
+quantifier while compressing a hedged fact into a sentence) and `PC-leading-subordinate`.
+The second one was a corpus defect, not a writer defect: all 15 sheets phrased their
+hedged claim as "Whether X or Y ... has not been Z," a clausal subject, which is the
+exact construction the rule bans, so the sheet itself handed the writer a violation to
+carry through rather than testing whether the writer avoids one unprompted. All 15
+were rewritten to extraposed form ("It has not been tested whether X or Y ...") or, in
+one case, an if/then conditional, preserving every fact.
+
+First fix, extraposing the hedge behind a dummy "it" ("It has not been tested whether
+X"): still 49 percent clean (22/45). `PC-leading-subordinate` findings did not drop to
+zero as expected; the judge held that a dummy-"it" subject still buries the predicate
+and does not satisfy the rule's actual repair, which is to name a real subject, not
+just relocate the clause. That reading is consistent with the rule's own text ("Put the
+subject first"), so the first fix was incomplete rather than wrong. A different rule
+also absorbed the same hedges in this run: `PC-name-the-uncertainty` appeared for the
+first time, firing where the writer turned "it is not yet known whether X, or Y" into
+"X may, or Y may," softening a named uncertainty into a modal.
+
+Second fix, real subjects instead of a dummy "it" ("No test has confirmed whether X",
+"The team does not yet know whether X"), plus two more baked-in patterns found the same
+way and fixed the same way: `Root cause: X` (a label-colon prefix, in all five incident
+sheets) and `Four Ns: A, B, C, and D` (a list-introducing colon in prose, `PC-colons`
+bans this outright with no exemption, in all 15 sheets), and nine semicolon splices
+(`PC-semicolons`, also banned outright) mostly in the "of those four, only A and B did
+X" sentences. All three were sheet-authoring defects, not genuine tests: each handed the
+writer a banned construction to carry through rather than testing composition.
+
+Measured after all three sheet fixes, 45 calls each: 76 percent clean (34/45), then 67
+percent (30/45) on a repeat, then 69 percent (31/45) after the single-line rewrite
+below, averaging 71 percent against the original 49. That was a real, reproduced
+improvement from the corpus fixes alone, unlike every contract-side edit attempted
+earlier this session.
+
+A second, larger jump followed a contract change: expanding `### Worked examples` from
+one paragraph to three (see below). Measured twice on the live catalog, 45 calls each:
+93 percent clean (42/45), then 78 percent (35/45), averaging about 86, both runs clearly
+above the 71 percent plateau and at or above the 82 percent ceiling. The same expansion
+measured on the compliance loop, pinned, moved nothing (66 percent, then 72, against 70
+deployed, the same null result as the original single-example test). Comprehensive
+worked examples help composition far more than editing: a rewrite anchors on the source
+text already in front of the model, while generation has only the fact sheet and the
+contract's worked examples to model good output on, so more of the latter helps more
+here specifically. `PC-add-nothing` remained the leading rule in the corpus-fix-only
+runs (tense and quantifier drift while compressing a fact sheet's bullet into a
+sentence), consistent with every other arm, and dropped to at most one finding per run
+once the worked examples expanded.
+
+One judge-side artifact surfaced in both post-fix runs: `PC-round-trip-damage` fired
+for "list markers collapsed into a paragraph," which is the generation task itself, not
+a defect, since the judge cannot distinguish a fact sheet whose bullets were always
+meant to become one paragraph from a real list an editor flattened by accident. Rather
+than write a generation-aware judge prompt, which would break the same mechanics-only
+discipline that keeps every other prompt honest, the sheets themselves were changed:
+`cases/generate.csv` now holds each sheet as one line of period-separated fragments with
+no bullet markers at all, so there is no list structure left to "collapse." A third
+measurement after that change scored 69 percent clean (31/45) with zero
+`PC-round-trip-damage` findings, confirming the fix. Three measurements now cluster at
+67, 69, and 76 percent, averaging about 71, against the 49 percent baseline before any
+of the three sheet-authoring defects were found. `cases/generate.csv` is single-line
+fragments per sheet, not the bulleted form described earlier in this section.
+
 ## Where the numbers stand
 
 | | Clean |
@@ -77,9 +173,28 @@ catalog:
 
 | Class | Clean |
 | --- | --- |
-| `good` | 83% |
-| `mixed` | 67% |
-| `slop` | 56% |
+| `good` | 83% (81% on the current, unpinned catalog) |
+| `mixed` | 67% (57% on the current, unpinned catalog) |
+| `slop` | 56% (54% on the current, unpinned catalog) |
+| `generation` | 86% average (93%, 78%) after expanding the worked examples, up from 71% (corpus fixes alone) and 49% (baseline); see below |
+
+The 83/67/56 figures were all measured with `JUDGE_CATALOG` pinned to a pre-edit
+catalog, which is correct for an A/B but was never followed by a run against the
+catalog a real, unpinned `/prose` invocation actually uses. That run happened once
+this session: 65 percent clean overall (139/213), `good` 80, `mixed` 57, `slop` 54.
+It is lower across every class than the pinned numbers, because a live catalog
+grades with the contract's current, more specific rule text, which finds more of
+what it is looking for. Treat 65/80/57/54 as the quotable numbers and the
+pinned figures above as A/B baselines only.
+
+`### Worked examples` in the contract expanded from one paragraph to three (a reply and
+a report excerpt added, together with the original paragraph), raising the number of
+rules demonstrated by an actual violated/not-violated table row from 20 of 76 to 61 of
+76 (`check-anchors.py` reports the count). Measured on this loop, pinned, the expansion
+moved nothing: 66 percent (141/213), then 72 (153/212), against 70 deployed-pinned,
+inside the same noise band the original single example landed in. It was kept anyway,
+because the same change produced the largest single result of the session on the
+generation loop below.
 
 ### The target is 80 percent, not 95
 
@@ -319,11 +434,12 @@ assertion cannot encode one.
 | ----------------------------- | ---------------------------------------------------------------- |
 | `promptfooconfig.yaml`        | Rewrite suite: provider, shared graders, case files              |
 | `promptfooconfig.comply.yaml` | Compliance loop                                                  |
+| `promptfooconfig.generate.yaml` | Generation loop                                                |
 | `promptfooconfig.pool.yaml`   | Pass one of corpus selection                                     |
 | `prompts/`                    | The instructions wrapped around each case                        |
 | `providers/`                  | `claude -p` wrappers                                             |
 | `graders/`                    | JavaScript assertions for the rewrite suite                      |
-| `cases/*.csv`                 | The rewrite suite, one row per case                              |
+| `cases/*.csv`                 | The rewrite suite, one row per case; `generate.csv` holds the 15 generation-loop fact sheets |
 | `tools/`                      | Mining, selection, reporting, anchor checking, judge calibration |
 | `corpus/`                     | Mined pages, selected paragraphs, notes, gitignored              |
 
@@ -381,16 +497,24 @@ does not fail, because a rule is allowed to exist before anyone writes a case.
 
 ## Open
 
-**The 70 percent is not attributed.** Three contract changes landed in the same
-A/B: the worked paragraph, the `PC-emdashes` trim, and the `PC-evidential-status`
-compression. Removing the worked paragraph and re-running with the judge still
-pinned separates them, and the answer decides what the next edits look like. If the
-example carries the gain, write more worked paragraphs. If the trims do, trim the
-other overloaded rules.
+**The 70 percent is attributed to the trims, not the worked paragraph.** Three
+contract changes landed in the same A/B: the worked paragraph, the `PC-emdashes`
+trim, and the `PC-evidential-status` compression. Removing the worked paragraph and
+re-running the compliance loop with the judge pinned to the same pre-edit catalog
+scored 69 percent clean (146/213), against 70 percent (149/213) with the paragraph
+in. That is inside the roughly-40-run noise band on a 213-run arm, so the paragraph
+carries none of the measured gain; the trims do. Next edits should trim the other
+overloaded rules rather than write more worked paragraphs.
 
-**The quotable number is still unmeasured.** 70 percent was measured with the judge
-pinned to the pre-edit catalog. The deployed configuration has the judge on the
-current one, and that run has not happened.
+**The quotable number is now measured: 65 percent, not 70.** Running the compliance
+loop with no `JUDGE_CATALOG` pin, so the judge grades against the live, current
+catalog the way a real `/prose` invocation would, scored 65 percent clean overall
+(139/213): `good` 80, `mixed` 57, `slop` 54. Every pinned A/B in this doc, including
+the 83/67/56 split, used a catalog frozen before the worked-paragraph and
+`PC-emdashes`/`PC-evidential-status` edits, which undercounts what the current,
+more specific rule text actually catches. The pinned numbers stay correct for
+measuring an edit's direction; they are not the number to quote for where the
+contract stands today.
 
 **The `good` arm damages about one run in six.** The diagnosis is specific and not
 what it looks like. The editor is not over-applying there. It is editing text that
@@ -402,3 +526,43 @@ at a missing stop condition rather than a wrong rule.
 The editor drops modals, tenses and scoping quantifiers, turning "worked that day"
 into "were working" and "sometimes for days or even weeks" into "for days or even
 weeks." A modality clause was added to the rule and did not move the number.
+
+**Tightening `PC-parallel-triads`'s exemption did not move the number.** The rule was
+the second-largest concentration after `PC-add-nothing`, 11 findings, 5 of them
+`held-then-violation`: the editor invoked the exemption and the judge rejected it,
+which pointed at a genuinely circular criterion ("keep the triad when the split
+would produce [the uniformity that is the reason to split]"). Replaced it with a
+concrete test, an inherent order in the source versus cadence with no such order.
+Pinned A/B against the same pre-worked-paragraph catalog used for the 70 percent
+measurement: 65 percent clean (138/213) against 70 percent deployed, a 5-point move
+on a 213-run arm, inside the roughly-40-run noise band. Reverted rather than spend a
+second run confirming a null result. The disagreement between editor and judge on
+this rule is real and unresolved; rewriting the exemption's wording did not reach it.
+
+**Fleshing out `PC-vague-claims` did not move the number either, and risked a worse
+defect.** The rule was a one-line stub with no markers or exemption, unlike its 45
+siblings ("vague claims without evidence [move 2]"). Expanded it to name markers
+("several teams noticed", "some improvement") and to instruct naming the count,
+comparison, or instance, or saying plainly that none exists. Pinned A/B against the
+same catalog: 67 percent clean (143/213) against 70 percent deployed, inside the
+noise band, with `slop` moving 56 to 44 and `mixed` 67 to 62. `PC-add-nothing`'s
+count rose in the same run, consistent with the writer inventing a number to satisfy
+"name the count" where the fact sheet or source supplied none, fighting the rule
+that already bans that. Reverted. A vague rule may still be underspecified, but
+telling the writer to be specific is not a safe fix on its own without also
+strengthening the "say so plainly" branch enough to out-compete it.
+
+**A self-review pass in the prose skill did not move the number.** All three edits
+above changed contract wording; this one changed the mechanism instead, on the
+theory that a single-pass rewrite with no verification step is inherently noisy.
+`SKILL.md` went from "rewrite, then print" to "draft, reread once sentence by
+sentence against the contract, then print." Pinned A/B: 65 percent clean (138/213)
+against 70 percent deployed, inside the noise band, with every class flat or down
+(`good` 83->75, `mixed` 67->63, `slop` 56->50). Reverted. Four edit attempts across
+two sessions, three on rule text and one on the skill's mechanism, have now each
+landed inside the same noise band. That is itself the finding: at this sample size
+(213 runs, ~40-run noise band) neither a contract edit nor a mechanism edit has yet
+produced a measurable movement, so the next attempt needs to either raise the
+sample size, reduce judge noise (majority-vote or per-dimension judging, both
+already listed above as untried), or accept that 67/56/49 may be closer to this
+population's true rate than to something four small edits can lift.
