@@ -135,7 +135,11 @@ echo "done, $(ls "$STATE_DIR"/*-*.md 2>/dev/null | wc -l | tr -d ' ') files writ
 
 Expect wall time close to the slowest single reviewer rather than the sum. Measured on a 22-file TypeScript repo, one reviewer took 148 seconds.
 
-A reviewer writes its own file with `apply_patch`. opencode has no tool named `write`, so a `write: true` in an agent definition matches nothing. The reviewer agents grant `apply_patch` and deny `bash`, `webfetch`, `context7_*`, `repomix_*`, `researcher_*`, and Serena's four write families. They run as `mode: primary`, because opencode ignores a subagent's `tools` block when the agent is selected with `--agent`.
+A reviewer writes its own file with `apply_patch`. The reviewer agents grant it and deny `bash`, `webfetch`, `context7_*`, `repomix_*`, `researcher_*`, and Serena's four write families. They run as `mode: primary`, because opencode ignores a subagent's `tools` block when the agent is selected with `--agent`.
+
+A reviewer must not call `task`. Two of 27 reviewers on a 1070-file repo spawned a subagent that never returned, and `TaskTool` runs a foreground subagent with a blocking `yield`, so the parent hung and Step 2's `wait` hung with it. The agents set `tools.task: false` and `permission.task: {"*": deny}`. After the fix both reviewers completed with zero `task` calls.
+
+Nothing guards against two runs at once. Step 2 writes to fixed paths with no lock, so a second invocation against the same repo interleaves into the same NDJSON and overwrites the same output file. That corrupted two attempts on 2026-09-22. Check for an in-flight run before dispatching.
 
 Provider limits are not the constraint. OpenAI reports 40,000,000 tokens per minute and Azure Foundry 15,000,000.
 
