@@ -24,7 +24,7 @@ If the user provided a path with the invocation, treat it as the target director
 | Label  | Model ID                   |
 | ------ | -------------------------- |
 | openai | openai/gpt-5.6-sol         |
-| gemini | google/gemini-pro-latest   |
+| gemini | google/gemini-3.8-flash    |
 | claude | az-anthropic/claude-opus-5 |
 
 Every ID must exist in `configs/opencode/opencode.json` under the matching provider and in that provider's `whitelist`. An ID missing from either fails that arm with `Model not found`, which surfaces only as an `error` event in the NDJSON.
@@ -33,7 +33,7 @@ Every ID must exist in `configs/opencode/opencode.json` under the matching provi
 jq -r '.provider | to_entries[] | .key as $p | .value.models | keys[] | "\($p)/\(.)"' ~/.config/opencode/opencode.json
 ```
 
-`gemini-pro-latest` is an alias. On 2026-09-22 it resolved to `gemini-3.1-pro-preview`, confirmed by the `modelVersion` field in the API response. Google re-points it when a newer pro ships, so the arm can change behavior without a commit here.
+The gemini arm runs a Flash model on purpose. Google publishes no pro above `gemini-3.1-pro-preview`, so the newest Google model available is `gemini-3.8-flash`, seven minor versions ahead of the newest pro. Measured on one security review of a 1070-file repo, flash returned 11 findings against pro's 6 on the same agent and prompt, at roughly twice the tokens. That is a single comparison, not a benchmark.
 
 ## Two rules that cost a day to learn
 
@@ -90,7 +90,7 @@ One bash block launches all 27 and waits. Substitute the values Step 1 printed.
 
 ```bash
 AREAS="security architecture solid correctness testing ops performance quality data"
-MODELS="openai:openai/gpt-5.6-sol gemini:google/gemini-pro-latest claude:az-anthropic/claude-opus-5"
+MODELS="openai:openai/gpt-5.6-sol gemini:google/gemini-3.8-flash claude:az-anthropic/claude-opus-5"
 PIDS=""
 
 for entry in $MODELS; do
@@ -106,8 +106,10 @@ find_declaration and find_implementations to resolve a usage. Read a whole
 file only when symbolic navigation cannot answer the question.
 
 Cite path:line from the live file and name the enclosing function, method,
-or type. Confirm the line by opening it before citing it. A finding without
-a verified path:line citation is not a finding. Drop it.
+or type. A line you saw counts as verified, and find_symbol returns a symbol's
+line range. When you cannot verify the exact line, cite the nearest line you
+saw and end the finding with `line unconfirmed`. Never drop a real defect
+because its line number is uncertain.
 
 OUTPUT_PATH: $out
 
@@ -167,7 +169,11 @@ Re-dispatch that one reviewer, which is a single `opencode run`. An area still u
 
 A reviewer sometimes writes a transitional sentence before its H2. Strip everything before the first `##` rather than re-dispatching for it. Prompt tuning does not fix that; stripping always does.
 
-Compare `cited` against `findings`. A finding whose first backticked field carries no `:line` is unusable, because nobody can confirm it without re-reading the whole file. Measured on 2026-09-21, openai cited 16 of 16 findings and claude 5 of 28. Re-dispatch any area with a gap.
+Compare `cited` against `findings`. A finding whose first backticked field carries no `:line` is unusable, because nobody can confirm it without re-reading the whole file. Measured on 2026-09-21, openai cited 16 of 16 findings and claude 5 of 28.
+
+A gap is not automatically a defect now that a reviewer may mark a finding `line unconfirmed` rather than discard it. Read the uncited findings before re-dispatching. Re-dispatch when they carry no symbol either.
+
+The instruction to drop an unverified finding was removed on 2026-09-22. Measured on gemini against one area, it cost 6 findings to keep: 1 with the clause, 6 without, including six path-traversal defects the suppressed run investigated and never reported. Removing the Ownership table instead recovered only 1, so that table stays.
 
 ### Step 4: Scan and Synthesize
 
