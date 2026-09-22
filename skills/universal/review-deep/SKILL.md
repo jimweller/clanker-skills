@@ -35,11 +35,15 @@ jq -r '.provider | to_entries[] | .key as $p | .value.models | keys[] | "\($p)/\
 
 The gemini arm runs a Flash model on purpose. Google publishes no pro above `gemini-3.1-pro-preview`, so the newest Google model available is `gemini-3.8-flash`, seven minor versions ahead of the newest pro. Measured on one security review of a 1070-file repo, flash returned 11 findings against pro's 6 on the same agent and prompt, at roughly twice the tokens. That is a single comparison, not a benchmark.
 
-## Two rules that cost a day to learn
+## The rule that cost two days to learn
 
-Never wrap `opencode run` in `timeout`. It hangs before creating a session and writes zero bytes, and `timeout --foreground` does not help. Measured with coreutils 9.11 across two alternating rounds, unwrapped returned 1053 bytes both times and wrapped returned 0 both times. A `timeout` wrapper in a diagnostic harness once produced a 44 percent apparent failure rate across 69 runs that had nothing to do with opencode.
+Redirect stdin from `/dev/null` on every `opencode run`. Without it the process blocks before creating a session, writes zero bytes, logs nothing past `message=init`, and exits only when something kills it. `opencode run` reads stdin to EOF before it does anything else, so any launcher that leaves stdin open hangs it, and a background job, a CI step, and an agent harness all do. This is anomalyco/opencode issue #38723, open against 1.18.25 and reproduced here on 1.18.20.
 
-Background the processes and `wait`, as Step 2 does. Impose no timeout, no poll interval, no token cap, and no turn cap on a reviewer. A review of a large repo takes as long as it takes, and every ceiling tried so far killed work that was about to finish.
+The hang looks intermittent and is not. Whether the launcher closes stdin decides it. Three reporters measured it deterministically across macOS arm64, Linux aarch64, and Windows, 5 of 5 hangs without the redirect against 5 to 10 of 10 successes with it.
+
+An earlier version of this file banned wrapping `opencode run` in `timeout` and blamed a 44 percent failure rate on the wrapper. That was wrong. The stall reproduces with no `timeout` anywhere, and upstream's own reproduction script uses `timeout 120`. Removing every bound is what turned a one-line stdin bug into a multi-day investigation, so Step 2b now checks each reviewer for a session row.
+
+Impose no token cap and no turn cap on a reviewer. A review of a large repo takes as long as it takes.
 
 Serena must be enabled in `~/.config/opencode/opencode.json` and started with `--project-from-cwd`. It is the only navigation the reviewers have. `--dir` points at the target so Serena's walk finds the project.
 
@@ -123,6 +127,7 @@ how your work is delivered. Do not return findings as your response."
       --dir "$TARGET_PATH" \
       --title "Review $label $area" \
       "$prompt" \
+      < /dev/null \
       > "$STATE_DIR/raw-$label-$area.ndjson" 2>"$STATE_DIR/$label-$area.log" &
     PIDS="$PIDS $!"
   done
@@ -145,6 +150,24 @@ Nothing guards against two runs at once. Step 2 writes to fixed paths with no lo
 
 Provider limits are not the constraint. OpenAI reports 40,000,000 tokens per minute and Azure Foundry 15,000,000.
 
+### Step 2b: Confirm Every Reviewer Started
+
+Run this as a separate foreground call while Step 2 is still waiting. A reviewer that never created a session produced nothing and never will.
+
+```bash
+sleep 30
+DB="$HOME/.local/share/opencode/opencode.db"
+for label in openai gemini claude; do
+  for area in security architecture solid correctness testing ops performance quality data; do
+    n=$(sqlite3 -readonly "$DB" "SELECT count(*) FROM session WHERE title='Review $label $area';")
+    [ "$n" -eq 0 ] && echo "NO SESSION $label $area"
+  done
+done
+echo "checked 27"
+```
+
+A healthy reviewer writes its session row within about 3 seconds of launch. Kill and relaunch any reviewer named here rather than letting it sit. One stalled run held for 55 minutes at zero bytes on 2026-09-22 before anyone looked.
+
 ### Step 3: Verify
 
 ```bash
@@ -157,7 +180,8 @@ for label in openai gemini claude; do
     else
       n=$(grep -c '^- \*\*' "$f")
       cited=$(grep -oE '^- \*\*(High|Medium|Low)\*\* `[^`]+`' "$f" | grep -c ':[0-9]')
-      echo "  $area ok findings=$n cited=$cited"
+      unconf=$(grep -c 'line unconfirmed' "$f")
+      echo "  $area ok findings=$n cited=$cited unconfirmed=$unconf"
     fi
   done
 done
@@ -170,6 +194,8 @@ Re-dispatch that one reviewer, which is a single `opencode run`. An area still u
 A reviewer sometimes writes a transitional sentence before its H2. Strip everything before the first `##` rather than re-dispatching for it. Prompt tuning does not fix that; stripping always does.
 
 Compare `cited` against `findings`. A finding whose first backticked field carries no `:line` is unusable, because nobody can confirm it without re-reading the whole file. Measured on 2026-09-21, openai cited 16 of 16 findings and claude 5 of 28.
+
+`cited` counts a finding carrying a `path:line` whether or not the reviewer ended it with `line unconfirmed`. The citation sits at the front of the line and the marker sits at the end, so the two never exclude each other. Subtract `unconfirmed` from `cited` for the count the reviewer stands behind. Measured on the gemini security probe of 2026-09-22, 38 findings were cited and 0 carried the marker.
 
 A gap is not automatically a defect now that a reviewer may mark a finding `line unconfirmed` rather than discard it. Read the uncited findings before re-dispatching. Re-dispatch when they carry no symbol either.
 
@@ -234,8 +260,9 @@ Serena carried 119 of 181 tool calls on a TypeScript repo and 2 of 28 on a repo 
 ## Rules
 
 - The invoking agent is a launcher and a synthesizer. It performs no review analysis of its own. Only Step 4 analyzes.
-- NEVER wrap `opencode run` in `timeout`. Background the processes and `wait`.
-- Impose no timeout, no poll loop, no token cap, and no turn cap on a reviewer. Let it finish.
+- ALWAYS redirect stdin from `/dev/null` on `opencode run`. Omitting it hangs the process before session creation with no output and no error, which is anomalyco/opencode issue #38723.
+- Impose no token cap and no turn cap on a reviewer. Let it finish.
+- Run Step 2b about 30 seconds after dispatch. A reviewer with no session row is dead and needs relaunching, and wall time cannot tell that apart from a slow review.
 - Run the Step 2 block as a background Bash call. `wait` blocks until all 27 exit, and backgrounding keeps that out of the main session.
 - Launch all 27 in one bash block. They are independent processes.
 - Use plain message invocation, not `--command`. The `--command` flag has a known issue with the context7 MCP server.
