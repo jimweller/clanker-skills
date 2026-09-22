@@ -37,7 +37,9 @@ jq -r '.provider | to_entries[] | .key as $p | .value.models | keys[] | "\($p)/\
 
 ## Two rules that cost a day to learn
 
-Never wrap `opencode run` in `timeout`. It hangs before creating a session and writes zero bytes, and `timeout --foreground` does not help. Measured with coreutils 9.11 across two alternating rounds, unwrapped returned 1053 bytes both times and wrapped returned 0 both times. A `timeout` wrapper in a diagnostic harness once produced a 44 percent apparent failure rate across 69 runs that had nothing to do with opencode. Background the process and poll its PID, as Step 2 does.
+Never wrap `opencode run` in `timeout`. It hangs before creating a session and writes zero bytes, and `timeout --foreground` does not help. Measured with coreutils 9.11 across two alternating rounds, unwrapped returned 1053 bytes both times and wrapped returned 0 both times. A `timeout` wrapper in a diagnostic harness once produced a 44 percent apparent failure rate across 69 runs that had nothing to do with opencode.
+
+Background the processes and `wait`, as Step 2 does. Impose no timeout, no poll interval, no token cap, and no turn cap on a reviewer. A review of a large repo takes as long as it takes, and every ceiling tried so far killed work that was about to finish.
 
 Serena must be enabled in `~/.config/opencode/opencode.json` and started with `--project-from-cwd`. It is the only navigation the reviewers have. `--dir` points at the target so Serena's walk finds the project.
 
@@ -126,16 +128,9 @@ done
 
 echo "launched $(echo $PIDS | wc -w | tr -d ' ') reviewers"
 
-elapsed=0
-while [ "$elapsed" -lt 1800 ]; do
-  alive=0
-  for pid in $PIDS; do kill -0 "$pid" 2>/dev/null && alive=$((alive+1)); done
-  [ "$alive" -eq 0 ] && break
-  sleep 10
-  elapsed=$((elapsed+10))
-done
-for pid in $PIDS; do kill -9 "$pid" 2>/dev/null; done
-echo "done after ${elapsed}s, $(ls "$STATE_DIR"/*-*.md 2>/dev/null | wc -l | tr -d ' ') files written"
+wait
+
+echo "done, $(ls "$STATE_DIR"/*-*.md 2>/dev/null | wc -l | tr -d ' ') files written"
 ```
 
 Expect wall time close to the slowest single reviewer rather than the sum. Measured on a 22-file TypeScript repo, one reviewer took 148 seconds.
@@ -229,7 +224,9 @@ Serena carried 119 of 181 tool calls on a TypeScript repo and 2 of 28 on a repo 
 ## Rules
 
 - The invoking agent is a launcher and a synthesizer. It performs no review analysis of its own. Only Step 4 analyzes.
-- NEVER wrap `opencode run` in `timeout`. Background it and poll the PID.
+- NEVER wrap `opencode run` in `timeout`. Background the processes and `wait`.
+- Impose no timeout, no poll loop, no token cap, and no turn cap on a reviewer. Let it finish.
+- Run the Step 2 block as a background Bash call. `wait` blocks until all 27 exit, and backgrounding keeps that out of the main session.
 - Launch all 27 in one bash block. They are independent processes.
 - Use plain message invocation, not `--command`. The `--command` flag has a known issue with the context7 MCP server.
 - Do NOT clean up per-area files, NDJSON, or logs during a run. Step 1 wipes them at the start of the next one.
