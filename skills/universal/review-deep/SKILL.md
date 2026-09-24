@@ -1,6 +1,6 @@
 ---
 name: review-deep
-description: Whole-codebase deep audit running 27 parallel reviewers across OpenAI, Gemini, and Claude via opencode run, navigating the live tree with Serena.
+description: Whole-codebase deep audit running 27 parallel reviewers across OpenAI, Gemini, and Claude via opencode run, navigating the live tree with Serena, plus one ocr scan coverage pass.
 context: fork
 disable-model-invocation: true
 ---
@@ -15,6 +15,8 @@ Review a codebase from 9 perspectives against 3 models at once. Every reviewer i
 
 Nothing is packed. There is no orchestrator process and no `task` fan-out. A reviewer reads the code as it sits on disk, so a citation points at a real line in a real file.
 
+One `ocr scan` runs alongside them. It reviews every reviewable file in its own conversation, so it covers the whole repo and sees nothing that spans two files. The reviewers see across files and choose what to read. Each covers the other's blind spot.
+
 ## Arguments
 
 If the user provided a path with the invocation, treat it as the target directory relative to the repo root. Otherwise review the whole repo.
@@ -23,9 +25,11 @@ If the user provided a path with the invocation, treat it as the target director
 
 | Label  | Model ID                   |
 | ------ | -------------------------- |
-| openai | openai/gpt-5.6-sol         |
+| openai | openai/gpt-6-sol           |
 | gemini | google/gemini-3.8-flash    |
-| claude | az-anthropic/claude-opus-5 |
+| claude | az-anthropic/claude-opus-5-5 |
+
+The ocr coverage pass uses the provider and model in `~/.opencodereview/config.json`.
 
 Every ID must exist in `configs/opencode/opencode.json` under the matching provider and in that provider's `whitelist`. An ID missing from either fails that arm with `Model not found`, which surfaces only as an `error` event in the NDJSON.
 
@@ -79,23 +83,39 @@ mkdir -p "$STATE_DIR"
 
 find "$STATE_DIR" -maxdepth 1 -name '*.md' -delete
 find "$STATE_DIR" -maxdepth 1 -name 'raw-*.ndjson' -delete
+find "$STATE_DIR" -maxdepth 1 \( -name 'ocr-scan.*' -o -name 'ledger.txt' -o -name 'opened.txt' \) -delete
+
+SCOPE=""
+[ "$TARGET_PATH" != "$PROJECT_ROOT" ] && SCOPE="--path ${TARGET_PATH#"$PROJECT_ROOT"/}"
+ocr scan --preview --format json --repo "$PROJECT_ROOT" $SCOPE 2>/dev/null \
+  | jq -r '.files[] | select(.will_review) | .path' > "$STATE_DIR/ledger.txt"
 
 echo "PROJECT_ROOT=$PROJECT_ROOT"
 echo "TARGET_PATH=$TARGET_PATH"
 echo "TARGET_NAME=$TARGET_NAME"
 echo "STATE_DIR=$STATE_DIR"
+echo "LEDGER=$(wc -l < "$STATE_DIR/ledger.txt" | tr -d ' ') files"
 ```
+
+`ocr scan --preview` lists every reviewable file without calling a model. `ledger.txt` is the list each reviewer must cover and the denominator for coverage in Step 3.
 
 `find -delete` rather than `rm -f`. A `safe-rm` shim on `PATH` moves paths to Trash and exits non-zero on a missing path even under `-f`, which breaks the wipe on a first run.
 
-### Step 2: Dispatch 27 Reviewers
+### Step 2: Dispatch 27 Reviewers and the Coverage Pass
 
-One bash block launches all 27 and waits. Substitute the values Step 1 printed.
+One bash block launches all 27 reviewers and the ocr scan, then waits. Substitute the values Step 1 printed.
 
 ```bash
 AREAS="security architecture solid correctness testing ops performance quality data"
-MODELS="openai:openai/gpt-5.6-sol gemini:google/gemini-3.8-flash claude:az-anthropic/claude-opus-5"
+MODELS="openai:openai/gpt-6-sol gemini:google/gemini-3.8-flash claude:az-anthropic/claude-opus-5-5"
+SCOPE=""
+[ "$TARGET_PATH" != "$PROJECT_ROOT" ] && SCOPE="--path ${TARGET_PATH#"$PROJECT_ROOT"/}"
 PIDS=""
+
+ocr scan --audience agent --repo "$PROJECT_ROOT" $SCOPE --max-tokens 1000000 \
+  --format json --output "$STATE_DIR/ocr-scan.json" \
+  < /dev/null > /dev/null 2> "$STATE_DIR/ocr-scan.log" &
+PIDS="$PIDS $!"
 
 for entry in $MODELS; do
   label="${entry%%:*}"
@@ -115,6 +135,11 @@ line range. When you cannot verify the exact line, cite the nearest line you
 saw and end the finding with `line unconfirmed`. Never drop a real defect
 because its line number is uncertain.
 
+LEDGER_PATH: $STATE_DIR/ledger.txt
+
+LEDGER_PATH lists the reviewable source files, one path per line. Read it
+first and cover every file it lists.
+
 OUTPUT_PATH: $out
 
 Write your findings to OUTPUT_PATH. Writing that file is mandatory and is
@@ -133,7 +158,7 @@ how your work is delivered. Do not return findings as your response."
   done
 done
 
-echo "launched $(echo $PIDS | wc -w | tr -d ' ') reviewers"
+echo "launched $(echo $PIDS | wc -w | tr -d ' ') processes, 27 reviewers and 1 ocr scan"
 
 wait
 
@@ -170,6 +195,16 @@ A healthy reviewer writes its session row within about 3 seconds of launch. Kill
 
 ### Step 3: Verify
 
+An arm sometimes returns its findings as its response instead of writing OUTPUT_PATH. `gpt-6-sol` does this. The findings are in the NDJSON, so copy them out before verifying.
+
+```bash
+for f in "$STATE_DIR"/raw-*.ndjson; do
+  b=$(basename "$f" .ndjson); out="$STATE_DIR/${b#raw-}.md"
+  [ -s "$out" ] && continue
+  jq -r 'select(.type=="text") | .part.text' "$f" | awk '/^## /{p=1} p' > "$out"
+done
+```
+
 ```bash
 for label in openai gemini claude; do
   echo "== $label =="
@@ -185,6 +220,16 @@ for label in openai gemini claude; do
     fi
   done
 done
+```
+
+Then measure coverage as files opened, not files cited. A file opened and not cited was read and found clean.
+
+```bash
+jq -r 'select(.type=="tool_use") | .part.state.input | (.filePath // .relative_path // .path // empty)' \
+  "$STATE_DIR"/raw-*.ndjson 2>/dev/null | sed "s|^$PROJECT_ROOT/||" | sort -u > "$STATE_DIR/opened.txt"
+echo "ledger files opened=$(comm -12 <(sort "$STATE_DIR/ledger.txt") "$STATE_DIR/opened.txt" | wc -l | tr -d ' ') of $(wc -l < "$STATE_DIR/ledger.txt" | tr -d ' ')"
+comm -23 <(sort "$STATE_DIR/ledger.txt") "$STATE_DIR/opened.txt" | sed 's/^/  never opened: /'
+jq -r '"ocr status=\(.status) files=\(.summary.files_reviewed) findings=\(.comments|length)"' "$STATE_DIR/ocr-scan.json"
 ```
 
 Treat an area as unreviewed when its file is missing, is empty, has no H2, or has an H2 with neither a finding line nor exactly `No findings.` Never record any of those as `No findings.`
@@ -208,7 +253,7 @@ Scan each file before reading it. A reviewer that quotes a secret produces a fil
 ```bash
 SCAN="$HOME/.config/dotfiles/scripts/canary-scan.sh"
 if [ -x "$SCAN" ]; then
-  for f in "$STATE_DIR"/*-*.md; do
+  for f in "$STATE_DIR"/*-*.md "$STATE_DIR/ocr-scan.json"; do
     [ -s "$f" ] && { echo "== $(basename "$f") =="; "$SCAN" "$f" || true; }
   done
 fi
@@ -216,13 +261,13 @@ fi
 
 `canary-scan.sh` exits 0 with no output when the file is clean or the plugin is absent, and exits 2 printing one `<ruleId> x<count>` line per rule when it hits. The `|| true` keeps a non-zero exit from ending the step. On a hit, name what fired and tell the operator that re-invoking with `[allow-pii]` on their own prompt clears the block.
 
-Then read the 27 files and compare across models:
+Then read the 27 files and `ocr-scan.json` and compare across models. ocr's comments carry `path`, `start_line`, `severity`, and `category`, and count as a fourth source when two sightings agree.
 
 1. Quorum findings, 3 of 3. Issues flagged by all three models, each with area, severity, and finding.
 2. Quorum findings, 2 of 3. Name which two agreed and which did not.
 3. Single-model findings. List all of them and note which model raised each.
 4. Conflicting assessments. Areas where models disagree, such as one flagging a risk another calls fine.
-5. Coverage gaps. Every area Step 3 marked `Not reviewed`, with the model and the reason. A quorum count is only meaningful against the models that covered that area.
+5. Coverage gaps. Every area Step 3 marked `Not reviewed`, with the model and the reason. A quorum count is only meaningful against the models that covered that area. Name every ledger file no reviewer opened. ocr's findings are the only review those files got.
 
 Include every finding. Do not skip or summarize away any items.
 
@@ -231,6 +276,8 @@ Include every finding. Do not skip or summarize away any items.
 `.llmtmp/review-deep/` holds the whole run and is wiped at the start of the next one:
 
 - `<label>-<area>.md`, 27 per-area findings files
+- `ocr-scan.json` and `ocr-scan.log`, the coverage pass
+- `ledger.txt`, the reviewable files, and `opened.txt`, the files reviewers opened
 - `raw-<label>-<area>.ndjson`, the full event stream per reviewer
 - `<label>-<area>.log`, stderr per reviewer
 
@@ -264,7 +311,7 @@ Serena carried 119 of 181 tool calls on a TypeScript repo and 2 of 28 on a repo 
 - Impose no token cap and no turn cap on a reviewer. Let it finish.
 - Run Step 2b about 30 seconds after dispatch. A reviewer with no session row is dead and needs relaunching, and wall time cannot tell that apart from a slow review.
 - Run the Step 2 block as a background Bash call. `wait` blocks until all 27 exit, and backgrounding keeps that out of the main session.
-- Launch all 27 in one bash block. They are independent processes.
+- Launch all 27 reviewers and the ocr scan in one bash block. They are independent processes.
 - Use plain message invocation, not `--command`. The `--command` flag has a known issue with the context7 MCP server.
 - Do NOT clean up per-area files, NDJSON, or logs during a run. Step 1 wipes them at the start of the next one.
 - If a reviewer fails, still wait for and report the others.
