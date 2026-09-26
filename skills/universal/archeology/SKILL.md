@@ -184,7 +184,7 @@ Where a claim and an artifact disagree, both appear.>
 - Do not link sources with convergence language that walks the reader toward a judgment.
 - Scope every absolute to what was searched, and name the search.
 - Label list prices, projections, and estimates as what they are.
-- Ghostwriting rules apply. The reader is a human colleague.
+- The clanker-prose plugin's ghostwriting rules apply. The reader is a human colleague.
 
 ## Formatting
 

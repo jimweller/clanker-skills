@@ -11,8 +11,8 @@ Write concise, direct README files for experienced engineers.
 
 ## Voice
 
-Prose style is not defined here. Two sections of the global agent instructions own it, and both
-load every session:
+Prose style is not defined here. The clanker-prose plugin's prose-contract owns it, injected
+via a SessionStart hook pointer to its two sections:
 
 - `Ghostwriting for Other Humans` - a README is read by another human, so it takes the ghostwriting
   contract: minimum facts, one fact per sentence, the deletion test on every word
