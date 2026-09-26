@@ -1,0 +1,249 @@
+{
+ "about": "What a correct pipeline run on the harbor fixture produces. live_eval.py scores a run against this. Phrases compare lowercased, with backticks, braces, and backslashes removed and whitespace collapsed. Locations name a file and the anchor text on the cited line.",
+ "defects": {
+  "D1": {
+   "real": true,
+   "what": "gitAuthArgs substring host match sends the service token to any host; cloneRepo is the caller",
+   "files": [
+    "src/git-auth.ts",
+    "src/worktree.ts"
+   ],
+   "one_fix": true,
+   "priority": [
+    "Critical",
+    "High"
+   ]
+  },
+  "D2": {
+   "real": true,
+   "what": "Store.deleteRepo lets a non-admin delete system rows; the route relies on it",
+   "files": [
+    "src/store.ts",
+    "src/routes.ts"
+   ],
+   "one_fix": true,
+   "priority": [
+    "Critical",
+    "High",
+    "Medium"
+   ]
+  },
+  "D3": {
+   "real": true,
+   "what": "unvalidated repository id escapes REPOS_DIR; ../ escapes both routes, an absolute path only the resolve route",
+   "files": [
+    "src/routes.ts",
+    "src/worktree.ts"
+   ],
+   "priority": [
+    "Critical",
+    "High",
+    "Medium"
+   ]
+  },
+  "D9": {
+   "real": "partly",
+   "what": "template base built from the raw id is real; the CLAUDE.md invariant is outside the judge's tree",
+   "files": [
+    "src/routes.ts"
+   ]
+  },
+  "D4": {
+   "real": "partly",
+   "what": "fetchCurrentUser rejection is unhandled in loadDashboard and mountDashboard discards it; fetchUserList never rejects",
+   "files": [
+    "src/api.ts",
+    "src/dashboard.ts"
+   ]
+  },
+  "D5": {
+   "real": false,
+   "what": "fetchUserList catches every failure and returns []"
+  },
+  "D6a": {
+   "real": true,
+   "what": "getIssue fetch has no timeout",
+   "files": [
+    "src/jira.ts",
+    "src/routes.ts"
+   ]
+  },
+  "D6b": {
+   "real": true,
+   "what": "getBuild fetch has no timeout",
+   "files": [
+    "src/ci.ts",
+    "src/routes.ts"
+   ]
+  },
+  "D12": {
+   "real": true,
+   "what": "searchAssigned interpolates email into JQL unescaped",
+   "files": [
+    "src/jira.ts",
+    "src/routes.ts"
+   ]
+  },
+  "D13": {
+   "real": true,
+   "what": "ADMIN_CIDR 0.0.0.0/0 makes every address an admin network",
+   "files": [
+    "src/config.ts"
+   ]
+  },
+  "D7": {
+   "real": true,
+   "what": "createFixTask writes feedback after the task is runnable, and emits the stale copy",
+   "files": [
+    "src/tasks.ts"
+   ]
+  },
+  "D8": {
+   "real": false,
+   "what": "findByName uses a parameterized query"
+  },
+  "D10": {
+   "real": true,
+   "what": "no tests for encrypt and decrypt",
+   "files": [
+    "src/crypto.ts"
+   ],
+   "priority": [
+    "Medium",
+    "Low"
+   ]
+  }
+ },
+ "wrong_sentences": [
+  {
+   "defect": "D3",
+   "text": "An id such as `../../etc` or an absolute path such as `/etc` escapes the repositories directory on both the template route and the cache listing route."
+  },
+  {
+   "defect": "D9",
+   "text": "CLAUDE.md invariant 1 requires every route to validate repository ids before using them."
+  },
+  {
+   "defect": "D4",
+   "text": "A failed request from either one rejects the dashboard load, and the page never renders."
+  },
+  {
+   "defect": "D5",
+   "text": "`fetchUserList` throws on any non-2xx response, so the admin page crashes when the session expires."
+  },
+  {
+   "defect": "D8",
+   "text": "`findByName` builds its SQL by string concatenation, so a repository name containing a quote injects SQL."
+  }
+ ],
+ "true_phrases": [
+  {
+   "defect": "D1",
+   "text": "substring match"
+  },
+  {
+   "defect": "D1",
+   "text": "sends the token to whatever host the URL names"
+  },
+  {
+   "defect": "D2",
+   "text": "owner is system"
+  },
+  {
+   "defect": "D3",
+   "text": "stored with no character or path validation"
+  },
+  {
+   "defect": "D4",
+   "text": "awaits fetchCurrentUser"
+  },
+  {
+   "defect": "D6a",
+   "text": "stalled Jira response"
+  },
+  {
+   "defect": "D6b",
+   "text": "stalled CI response"
+  },
+  {
+   "defect": "D10",
+   "text": "round trip and tamper detection"
+  },
+  {
+   "defect": "D12",
+   "text": "without escaping"
+  },
+  {
+   "defect": "D13",
+   "text": "every client address counts as an admin network"
+  },
+  {
+   "defect": "D7",
+   "text": "second statement"
+  }
+ ],
+ "same_ticket": [
+  {
+   "defect": "D1",
+   "locations": [
+    {
+     "path": "src/git-auth.ts",
+     "anchor": "remoteUrl.includes(\"github.com\")"
+    },
+    {
+     "path": "src/worktree.ts",
+     "anchor": "gitAuthArgs(repo.remoteUrl, SERVICE_TOKEN)"
+    }
+   ]
+  },
+  {
+   "defect": "D2",
+   "locations": [
+    {
+     "path": "src/store.ts",
+     "anchor": "owner = 'system'"
+    },
+    {
+     "path": "src/routes.ts",
+     "anchor": "await store.deleteRepo(req.params.id, req.user);"
+    }
+   ]
+  }
+ ],
+ "separate_tickets": [
+  {
+   "defects": [
+    "D6a",
+    "D6b"
+   ],
+   "locations": [
+    {
+     "path": "src/jira.ts",
+     "anchor": "const res = await fetch(`${JIRA}/issue/${key}`);"
+    },
+    {
+     "path": "src/ci.ts",
+     "anchor": "const res = await fetch(`${CI}/builds/${id}`);"
+    }
+   ]
+  }
+ ],
+ "rendering": [
+  {
+   "defect": "D12",
+   "must_contain": "Escape backslash and {{\"}}"
+  },
+  {
+   "defect": "D13",
+   "must_contain": "{{0.0.0.0}} – {{255.255.255.255}}"
+  },
+  {
+   "defect": "D7",
+   "must_contain": "{{\\{ ...task \\}}}"
+  }
+ ],
+ "markers": [
+  "DECOY-REVIEW-MARKER",
+  "FIXED-LATER-MARKER"
+ ]
+}

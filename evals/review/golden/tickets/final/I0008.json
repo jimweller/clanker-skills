@@ -1,0 +1,20 @@
+{
+ "id": "I0008",
+ "issue": "I0008",
+ "summary": "getIssue Jira request has no timeout or abort signal",
+ "summary_source": "editor",
+ "priority": "Medium",
+ "type": "Bug",
+ "labels": [
+  "review-deep",
+  "performance"
+ ],
+ "locations": [
+  "src/jira.ts:4"
+ ],
+ "members": [
+  "F10"
+ ],
+ "description": "{panel:bgColor=#deebff}\nh3. Context\n* {{src/jira.ts:4}} {{getIssue}} The Jira request has no timeout or abort signal, so a stalled Jira response hangs every caller of {{getIssue}}.\n{panel}\n\nh3. Details\nPaths and line numbers refer to commit {{4ef35ce0077924f16ca19a77c0823a644f521bb3}} on main.\n\n{code:javascript}\n// src/jira.ts:2-9\n\nexport async function getIssue(key: string): Promise<unknown> {\n  const res = await fetch(`${JIRA}/issue/${key}`);\n  return res.json();\n}\n\nexport async function searchAssigned(email: string): Promise<unknown> {\n  const jql = `assignee = \"${email}\" ORDER BY created DESC`;\n{code}\n",
+ "flags": []
+}

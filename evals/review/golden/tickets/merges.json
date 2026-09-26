@@ -1,0 +1,20 @@
+{
+ "I0001-M1": {
+  "units": [
+   "I0001-01",
+   "I0001-02"
+  ],
+  "summary": "Substring host check leaks GitHub service token to lookalike remote hosts",
+  "severity": "Critical",
+  "reason": "Both tickets describe one defect. In src/git-auth.ts:8, gitAuthArgs decides whether to add the service token by checking `remoteUrl.includes(\"github.com\")`. cloneRepo in src/worktree.ts:15 is the only caller: it passes the user-supplied repo.remoteUrl and SERVICE_TOKEN to gitAuthArgs, then runs `git clone` against that URL. Replacing the substring check in gitAuthArgs with a parse of the URL's hostname and an exact match on github.com fixes both tickets. Because anyone who can register a repository can collect the token, this is an exploitable token leak."
+ },
+ "I0004-M1": {
+  "units": [
+   "I0004-01",
+   "I0004-02"
+  ],
+  "summary": "Non-admin delete filter matches system-owned repos, letting any user delete them",
+  "severity": "Critical",
+  "reason": "In src/store.ts:29, Store.deleteRepo builds the non-admin delete query as `DELETE FROM repos WHERE id = ? AND (owner = ? OR owner = 'system')`, so it also deletes rows owned by `system`. The route deleteRepo in src/routes.ts:28 does no ownership check of its own. It just passes req.params.id and req.user to this method. Removing `OR owner = 'system'` from the store query fixes the store method, and the route inherits that fix, so one change resolves both tickets."
+ }
+}

@@ -1,0 +1,142 @@
+{
+ "I0001-01": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "Critical",
+  "summary": "Substring host check sends the GitHub service token to lookalike remote hosts",
+  "texts": {},
+  "deleted": [],
+  "actions": {
+   "keep": 1
+  }
+ },
+ "I0001-02": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "Critical",
+  "summary": "cloneRepo sends service token to any remote URL containing \"github.com\"",
+  "texts": {
+   "F18": "`cloneRepo` passes the user-supplied `remoteUrl` straight to `gitAuthArgs` with the service token, so `git clone` sends the token to whatever host the URL names, as long as the URL contains the substring `github.com` anywhere."
+  },
+  "deleted": [],
+  "actions": {
+   "edit": 1
+  }
+ },
+ "I0002": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "Medium",
+  "summary": "fetchCurrentUser failures reject loadDashboard and the dashboard never renders",
+  "texts": {
+   "F03": "`loadDashboard` awaits `fetchCurrentUser` and `fetchUserList` with no error handling. A failed request from `fetchCurrentUser` rejects the dashboard load, and the page never renders."
+  },
+  "deleted": [],
+  "actions": {
+   "keep": 1,
+   "edit": 1
+  }
+ },
+ "I0003": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "High",
+  "summary": "Unvalidated repo ids let template and cache listing routes escape REPOS_DIR",
+  "texts": {
+   "F12": "The repository id is stored with no character or path validation and later used as a directory name. An id such as `../../etc` escapes the repositories directory on both the template route and the cache listing route; an absolute path such as `/etc` escapes it on the cache listing route.",
+   "F14": "The template route builds its base directory from the raw repository id."
+  },
+  "deleted": [],
+  "actions": {
+   "edit": 2
+  }
+ },
+ "I0004-01": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "High",
+  "summary": "Non-admins can delete system-owned repositories through the delete route",
+  "texts": {},
+  "deleted": [],
+  "actions": {
+   "keep": 1
+  }
+ },
+ "I0004-02": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "High",
+  "summary": "Non-admin users can delete system-owned repos via Store.deleteRepo",
+  "texts": {},
+  "deleted": [],
+  "actions": {
+   "keep": 1
+  }
+ },
+ "I0005": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "Medium",
+  "summary": "getBuild CI request has no timeout or abort signal",
+  "texts": {},
+  "deleted": [],
+  "actions": {
+   "keep": 1
+  }
+ },
+ "I0006": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "High",
+  "summary": "ADMIN_CIDR 0.0.0.0/0 makes every client an admin for auditLog",
+  "texts": {},
+  "deleted": [],
+  "actions": {
+   "keep": 1
+  }
+ },
+ "I0007": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "Low",
+  "summary": "No tests for encrypt/decrypt round trip and tamper detection",
+  "texts": {},
+  "deleted": [],
+  "actions": {
+   "keep": 1
+  }
+ },
+ "I0008": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "Medium",
+  "summary": "getIssue Jira request has no timeout or abort signal",
+  "texts": {},
+  "deleted": [],
+  "actions": {
+   "keep": 1
+  }
+ },
+ "I0009": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "Medium",
+  "summary": "searchAssigned interpolates unescaped email into JQL query",
+  "texts": {},
+  "deleted": [],
+  "actions": {
+   "keep": 1
+  }
+ },
+ "I0011": {
+  "status": "ready",
+  "reasons": [],
+  "severity": "High",
+  "summary": "createFixTask race: task running before feedback written, stale emit",
+  "texts": {},
+  "deleted": [],
+  "actions": {
+   "keep": 1
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "id": "I0003",
+ "issue": "I0003",
+ "summary": "Unvalidated repo ids let template and cache listing routes escape REPOS_DIR",
+ "summary_source": "editor",
+ "priority": "High",
+ "type": "Bug",
+ "labels": [
+  "review-deep",
+  "architecture",
+  "security"
+ ],
+ "locations": [
+  "src/routes.ts:21",
+  "src/routes.ts:36"
+ ],
+ "members": [
+  "F12",
+  "F14"
+ ],
+ "description": "{panel:bgColor=#deebff}\nh3. Context\n* {{src/routes.ts:21}} {{registerRepo}} The repository id is stored with no character or path validation and later used as a directory name. An id such as {{../../etc}} escapes the repositories directory on both the template route and the cache listing route; an absolute path such as {{/etc}} escapes it on the cache listing route.\n* {{src/routes.ts:36}} {{template}} The template route builds its base directory from the raw repository id.\n{panel}\n\nh3. Details\nPaths and line numbers refer to commit {{4ef35ce0077924f16ca19a77c0823a644f521bb3}} on main.\n\n{code:javascript}\n// src/routes.ts:19-26\n      const { id, remoteUrl } = req.body;\n      if (!id || !remoteUrl) return { status: 400 };\n      await store.insertRepo({ id, remoteUrl, owner: req.user.oid });\n      await cloneRepo({ id, remoteUrl, owner: req.user.oid });\n      return { status: 201 };\n    },\n\n    async deleteRepo(req: Request) {\n{code}\n\n{code:javascript}\n// src/routes.ts:34-41\n\n    async template(req: Request) {\n      const base = path.join(REPOS_DIR, req.params.id);\n      const file = path.resolve(base, \"docs\", req.params.name);\n      if (!file.startsWith(base)) return { status: 400 };\n      return { status: 200, body: await readFile(file, \"utf8\") };\n    },\n\n{code}\n",
+ "flags": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "I0006",
+ "issue": "I0006",
+ "summary": "ADMIN_CIDR 0.0.0.0/0 makes every client an admin for auditLog",
+ "summary_source": "editor",
+ "priority": "High",
+ "type": "Bug",
+ "labels": [
+  "review-deep",
+  "security"
+ ],
+ "locations": [
+  "src/config.ts:3"
+ ],
+ "members": [
+  "F06"
+ ],
+ "description": "{panel:bgColor=#deebff}\nh3. Context\n* {{src/config.ts:3}} {{ADMIN_CIDR}} The admin allowlist is {{0.0.0.0/0}}, which spans {{0.0.0.0}} \u2013 {{255.255.255.255}}, so every client address counts as an admin network and {{auditLog}} serves the audit log to anyone.\n{panel}\n\nh3. Details\nPaths and line numbers refer to commit {{4ef35ce0077924f16ca19a77c0823a644f521bb3}} on main.\n\n{code:javascript}\n// src/config.ts:1-8\nexport const REPOS_DIR = \"/var/harbor/repos\";\nexport const AUDIT_LOG = \"/var/harbor/audit.log\";\nexport const ADMIN_CIDR = \"0.0.0.0/0\";\nexport const SERVICE_TOKEN = process.env.HARBOR_GITHUB_TOKEN ?? \"\";\n\nexport function isAdminAddress(ip: string): boolean {\n  return cidrContains(ADMIN_CIDR, ip);\n}\n{code}\n",
+ "flags": []
+}

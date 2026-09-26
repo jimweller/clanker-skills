@@ -1,0 +1,420 @@
+{
+ "about": "Jira wiki markup sent in a scratch issue (DEVX-4503, archived) and the description Jira stored, read back as ADF. The content is synthetic. Round 1 covers backslashes and escapes in and out of monospace; round 2 covers encodings tried for a lone backslash.",
+ "rounds": [
+  {
+   "wiki": "h3. Wiki render test\nEach line wraps a sample between the markers x and y.\n* A lone backslash in monospace: x {{\\}} y\n* Doubled backslash in monospace: x {{\\\\}} y\n* Backslash then space in monospace: x {{\\ }} y\n* Escaped quote in monospace: x {{\"a\\\"b\"}} y\n* Backslash quote in monospace: x {{\\\"}} y\n* Escaped braces in monospace: x {{\\{ ...task \\}}} y\n* Escaped pipe in monospace: x {{a\\|b}} y\n* Escaped star in monospace: x {{a\\*b}} y\n* Escaped brackets in monospace: x {{\\[1\\]}} y\n* Escaped braces in prose: x \\{brace\\} y\n* Escaped pipe in prose: x a\\|b y\n* Escaped brackets in prose: x \\[1\\] y\n",
+   "adf": {
+    "type": "doc",
+    "version": 1,
+    "content": [
+     {
+      "type": "heading",
+      "attrs": {
+       "level": 3
+      },
+      "content": [
+       {
+        "type": "text",
+        "text": "Wiki render test"
+       }
+      ]
+     },
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "Each line wraps a sample between the markers x and y."
+       }
+      ]
+     },
+     {
+      "type": "bulletList",
+      "content": [
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "A lone backslash in monospace: x {{}} y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Doubled backslash in monospace: x "
+           },
+           {
+            "type": "text",
+            "text": "\\\\",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Backslash then space in monospace: x {{\\ }} y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Escaped quote in monospace: x "
+           },
+           {
+            "type": "text",
+            "text": "\"a\\\"b\"",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Backslash quote in monospace: x "
+           },
+           {
+            "type": "text",
+            "text": "\\\"",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Escaped braces in monospace: x "
+           },
+           {
+            "type": "text",
+            "text": "{ ...task }",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Escaped pipe in monospace: x "
+           },
+           {
+            "type": "text",
+            "text": "a|b",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Escaped star in monospace: x "
+           },
+           {
+            "type": "text",
+            "text": "a*b",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Escaped brackets in monospace: x "
+           },
+           {
+            "type": "text",
+            "text": "[1]",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Escaped braces in prose: x {brace} y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Escaped pipe in prose: x a|b y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Escaped brackets in prose: x [1] y"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "wiki": "h3. Wiki render test, round 2\n* Entity in monospace: x {{&#92;}} y\n* Triple backslash in monospace: x {{\\\\\\}} y\n* Backslash before a closing marker: x {{a\\ b}} y\n* Backslash inside words: x {{a\\b}} y",
+   "adf": {
+    "type": "doc",
+    "version": 1,
+    "content": [
+     {
+      "type": "heading",
+      "attrs": {
+       "level": 3
+      },
+      "content": [
+       {
+        "type": "text",
+        "text": "Wiki render test, round 2"
+       }
+      ]
+     },
+     {
+      "type": "bulletList",
+      "content": [
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Entity in monospace: x "
+           },
+           {
+            "type": "text",
+            "text": "&#92;",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Triple backslash in monospace: x {{\\\\\\}} y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Backslash before a closing marker: x "
+           },
+           {
+            "type": "text",
+            "text": "a\\ b",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "Backslash inside words: x "
+           },
+           {
+            "type": "text",
+            "text": "a\\b",
+            "marks": [
+             {
+              "type": "code"
+             }
+            ]
+           },
+           {
+            "type": "text",
+            "text": " y"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

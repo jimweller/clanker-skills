@@ -1,0 +1,23 @@
+{
+ "id": "I0004-M1",
+ "issue": "I0004",
+ "summary": "Non-admin delete filter matches system-owned repos, letting any user delete them",
+ "summary_source": "merge",
+ "priority": "High",
+ "type": "Bug",
+ "labels": [
+  "review-deep",
+  "correctness",
+  "security"
+ ],
+ "locations": [
+  "src/routes.ts:28",
+  "src/store.ts:29"
+ ],
+ "members": [
+  "F13",
+  "F16"
+ ],
+ "description": "{panel:bgColor=#deebff}\nh3. Context\n* {{src/routes.ts:28}} {{deleteRepo}} The delete route applies no ownership check of its own and relies on {{Store.deleteRepo}}, whose filter lets a non-admin delete system-owned repositories.\n* {{src/store.ts:29}} {{Store.deleteRepo}} For a non-admin caller the delete also matches rows whose owner is {{system}}, so any authenticated user can delete shared system repositories.\n{panel}\n\nh3. Details\nPaths and line numbers refer to commit {{4ef35ce0077924f16ca19a77c0823a644f521bb3}} on main.\n\n{code:javascript}\n// src/routes.ts:26-33\n    async deleteRepo(req: Request) {\n      try {\n        await store.deleteRepo(req.params.id, req.user);\n        return { status: 204 };\n      } catch {\n        return { status: 404 };\n      }\n    },\n{code}\n\n{code:javascript}\n// src/store.ts:27-33\n      return;\n    }\n    const result = await this.db.run(\"DELETE FROM repos WHERE id = ? AND (owner = ? OR owner = 'system')\", [id, ctx.oid]);\n    if (result.changes === 0) throw new Error(`repo not found: ${id}`);\n  }\n}\n\n{code}\n",
+ "flags": []
+}

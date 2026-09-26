@@ -1,0 +1,13 @@
+{
+ "groups": [
+  {
+   "keys": [
+    "c01-001",
+    "c01-002"
+   ],
+   "title": "Unhandled user-fetch failures reject loadDashboard and crash the page",
+   "location": "src/api.ts:27",
+   "window_groups": 1
+  }
+ ]
+}
