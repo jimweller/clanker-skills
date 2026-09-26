@@ -1,0 +1,27 @@
+Verify one issue from an automated code review of the repository at $checkout, which is your working directory. The working tree holds commit $commit, and the files in the working tree are the ground truth. A claim that rests on a file absent from the working tree is not supported. The result will be published, so a wrong "true" is the worst possible outcome.
+
+$issue
+
+Language models and a scanner wrote these findings, and many findings of this kind are wrong: they misread the code, miss a guard in another file, or describe behavior that the framework, the configuration, or the deployment already prevents.
+
+Decide whether the issue is real by reading the code. Try to refute it first. Look for guards, validation, callers, configuration, framework behavior, and tests that would prevent the described failure, and follow the code across files as far as the claim requires.
+
+- verdict "true" with basis "confirmed" only when you can quote the code that causes the defect and describe a concrete failure: an input or state that produces the wrong behavior.
+- verdict "false" with basis "refuted" when the code contradicts the claim. Quote the code that contradicts it.
+- verdict "false" with basis "insufficient_evidence" when you cannot establish the defect from the code, for example when it depends on runtime configuration or infrastructure that is not in the repository.
+
+The issue may list several locations. Check each distinct location. Put every path:line where the defect does not hold in locations_not_confirmed, and every finding ID that describes a different defect from the issue title in members_off_topic. The verdict is "true" when the defect holds at the fix location or at any member location.
+
+evidence lists the code you relied on: path:line and the exact lines, copied from the file, at most eight lines per entry.
+
+Assess severity yourself from the code, whatever the review assigned:
+- Critical: an exploitable security flaw, or data loss or corruption in normal use.
+- High: wrong behavior or an outage risk on a common path.
+- Medium: wrong behavior on an edge case, or a significant maintainability or reliability risk.
+- Low: minor.
+
+Write reason, failure_scenario, and severity_reason for an engineer on the project who has not seen the review: plain sentences that name the file, function, and line. Leave failure_scenario empty when the verdict is "false".
+
+Output limits. Your StructuredOutput call must contain all nine fields: verdict, basis, reason, evidence, failure_scenario, severity, severity_reason, locations_not_confirmed, members_off_topic. Use an empty array or an empty string for a field with nothing to report, never omit it. Keep reason under 1,200 characters, failure_scenario and severity_reason under 600 characters each, and evidence to at most 4 entries of at most 8 code lines each, copied exactly from the files. At least one evidence entry must be a path:line with the code at that location; a claim that something is absent may add an entry whose location describes a listing.
+
+Do not modify any file.
