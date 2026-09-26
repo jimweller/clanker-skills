@@ -1,4 +1,0 @@
-# harbor
-
-Invariant 1: every route validates repository ids before using them.
-Invariant 2: credentials never leave the process.
