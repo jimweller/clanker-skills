@@ -1,0 +1,11 @@
+Several bug tickets describe code in the repository at $checkout, which is your working directory. The files in the working tree, which holds commit $commit, are the ground truth. Each ticket covers one file. Decide which tickets describe the same defect.
+
+Two tickets describe the same defect when a change at a single location resolves both, for example a caller and the callee whose logic is wrong, or a check that is wrong where it is defined and is reported again where it is used. Tickets describe different defects when each needs its own change, even when the symptom or the pattern is the same, for example the same missing timeout in two independent fetch calls.
+
+$tickets
+
+Read the code to decide. Return groups. Each group lists the ids of tickets that describe one defect. Every ticket appears in exactly one group, and a ticket that shares its defect with no other ticket is a group of one.
+
+For every group, give reason, naming the code you read that shows a single change resolves every ticket in the group, or for a group of one, why no other ticket shares its fix. For a group of two or more, write summary, at most 80 characters with no trailing period, stating the defect the group shares, and assess severity from the code: Critical is an exploitable security flaw, or data loss or corruption in normal use; High is wrong behavior or an outage risk on a common path; Medium is wrong behavior on an edge case, or a significant maintainability or reliability risk; Low is minor. For a group of one, return that ticket's summary and severity exactly as given. Nothing you write may mention how the defects were found.
+
+Do not modify any file.
